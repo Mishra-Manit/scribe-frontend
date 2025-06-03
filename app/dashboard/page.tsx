@@ -7,7 +7,7 @@ import MobileRestriction from "@/components/MobileRestriction";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "../../config/firebase";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, Timestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 
@@ -17,7 +17,7 @@ interface EmailHistory {
   professor_interest: string;
   email_message: string;
   source: string;
-  created_at: any;
+  created_at: Timestamp;
   status: string;
 }
 
