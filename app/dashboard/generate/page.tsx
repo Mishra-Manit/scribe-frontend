@@ -64,7 +64,7 @@ export default function GenerateEmailsPage() {
         }
 
         // Just wait for the response to complete, no need to parse
-        await res.json();
+        // await res.json(); // Commented out or removed
       } catch (error) {
         console.error("Error:", error);
       }
