@@ -1,10 +1,9 @@
 "use client";
 import { useRouter } from "next/navigation"
-import Link from "next/link"
 import React from "react"
-import {auth, db} from "../config/firebase"
+import { db } from "../config/firebase"
 import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth"
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore"
+import { doc, setDoc, getDoc } from "firebase/firestore"
 import { useAuth } from "../context/AuthContextProvider"
 
 export default function LandingPage() {
@@ -12,7 +11,7 @@ export default function LandingPage() {
   const auth = getAuth();
   const router = useRouter();
 
-  const { user, logout } = useAuth();
+  useAuth(); // Call useAuth if it has side effects, otherwise this line can be removed if not needed.
 
   const loginWithGoogle = async () => {
     try {

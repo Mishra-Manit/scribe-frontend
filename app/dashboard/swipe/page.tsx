@@ -105,7 +105,7 @@ export default function SwipePage() {
             {professors.length === 0 && !loading && (
               <div className="text-center p-10 bg-white rounded-xl shadow-2xl">
                 <h2 className="text-3xl font-bold text-gray-700 mb-3">All Swiped!</h2>
-                <p className="text-gray-500">You've gone through all available professors for now.</p>
+                <p className="text-gray-500">You&apos;ve gone through all available professors for now.</p>
                 <p className="text-gray-500">Check back later for new matches!</p>
               </div>
             )}

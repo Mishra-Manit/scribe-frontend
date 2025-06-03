@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion, useMotionValue, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
+import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card'; // Assuming this path is correct for your Card component
 import { Professor } from '../hooks/useFirebaseProfessors';
 
@@ -33,7 +34,7 @@ export function ProfessorCard({ professor, onSwipe, isActive, manualExitInfo }: 
     }
   }, [isActive, professor.id, x]);
 
-  const handleDragEnd = (event: any, info: any) => {
+  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
     if (!isActive) return;
 
     let direction: 'left' | 'right' | null = null;
@@ -106,10 +107,13 @@ export function ProfessorCard({ professor, onSwipe, isActive, manualExitInfo }: 
       <Card className="w-full h-full flex flex-col justify-between relative overflow-hidden shadow-xl rounded-2xl select-none">
         {/* Image */}
         <div className="w-full h-3/5 relative">
-          <img 
+          <Image 
             src={professor.image || "/placeholder.svg"} 
             alt={professor.name} 
-            className="w-full h-full object-cover pointer-events-none" // Added pointer-events-none to image
+            fill={true}
+            style={{ objectFit: "cover" }} // Replaces className object-cover for Next/Image
+            className="pointer-events-none" // Keep existing className if it has other styles
+            priority={isActive} // Optionally prioritize loading for active card
           />
           {/* Confirm/Deny overlays */}
           {isActive && (

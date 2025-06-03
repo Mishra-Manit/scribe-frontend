@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "../../../context/AuthContextProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import MobileRestriction from "@/components/MobileRestriction";

@@ -5,16 +5,11 @@ import { useAuth } from "../../context/AuthContextProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import MobileRestriction from "@/components/MobileRestriction";
 import Navbar from "@/components/Navbar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "../../config/firebase";
-import { doc, getDoc, collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
-
-interface EmailResponse {
-  "Professor Name": string;
-  "Email Content": string;
-}
 
 interface EmailHistory {
   id: string;
@@ -64,7 +59,7 @@ export default function DashboardPage() {
           });
 
           return unsubscribe;
-        } catch (error) {
+        } catch (error: unknown) {
           console.error("Error fetching email history:", error);
         }
       }
@@ -93,7 +88,7 @@ export default function DashboardPage() {
                   Welcome back, {user?.displayName || "Guest"}!
                 </h1>
                 <p className="text-gray-600">
-                  Ready to generate some cold emails? Let's get started.
+                  Ready to generate some cold emails? Let&apos;s get started.
                 </p>
               </div>
             </div>
