@@ -111,7 +111,7 @@ export function ProfessorCard({ professor, onSwipe, isActive, manualExitInfo }: 
             src={professor.image || "/placeholder.svg"} 
             alt={professor.name} 
             fill={true}
-            style={{ objectFit: "cover" }} // Replaces className object-cover for Next/Image
+            style={{ objectFit: "contain" }} // Ensures the entire image fits within the frame
             className="pointer-events-none" // Keep existing className if it has other styles
             priority={isActive} // Optionally prioritize loading for active card
           />

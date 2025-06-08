@@ -50,7 +50,8 @@ export default function GenerateEmailsPage() {
 
       try {
         //const res = await fetch("http://127.0.0.1:5000/generate-email", {
-        const res = await fetch("https://pythonserver-42bcc9044f10.herokuapp.com/generate-email", {
+        //const res = await fetch("https://pythonserver-42bcc9044f10.herokuapp.com/generate-email", {
+        const res = await fetch("http://146.190.115.1/generate-email", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -83,11 +84,28 @@ export default function GenerateEmailsPage() {
           <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">Generate Cold Emails</h1>
             
+            {/* Instructions Section */}
+            <div className="max-w-2xl mx-auto mb-6 p-4 border-2 border-dashed border-gray-300 rounded-lg">
+              <h2 className="text-xl font-semibold text-gray-800 mb-3">How to Format Your Email Template</h2>
+              <p className="text-sm text-gray-700 mb-2">
+                Please use square brackets <code>[]</code> to denote parts of your template that should be personalized for each professor. 
+                For example, if you want to insert the professor's name, use <code><strong>[Professor's Name]</strong></code>.
+              </p>
+              <p className="text-sm text-gray-700">
+                Other placeholders you might use could be <code><strong>[University Name]</strong></code>, <code><strong>[Professor's Most Recent Research Paper]</strong></code>, etc. 
+                Ensure these placeholders are clearly marked so the system can replace them correctly.
+              </p>
+              <h3 className="text-md font-semibold text-gray-800 mt-4 mb-2">Example Section:</h3>
+              <div className="text-sm text-gray-700 bg-gray-100 p-3 rounded-md">
+                <p className="mb-2">I have a deep passion for the field of <strong>[insert topic of research at Lab]</strong> and would love to learn further from you. I read your paper, <strong>"[insert researcher's key research paper name],"</strong> and found it incredibly fascinating; your findings prompted me to read more about <strong>[insert research paper's specific topic in that field]</strong>. I would love to gain experience in <strong>[insert topic of research at Lab]</strong> by working under you and would appreciate your expertise as I work to accomplish my goals. In the future, I aspire to pursue a degree in astrophysics and later down the road, a research career.</p>
+              </div>
+            </div>
+
             {/* Form Section */}
             <div className="max-w-2xl mx-auto mb-8">
               <div className="border border-gray-200 bg-white rounded-lg">
                 <div className="p-6">
-                  <div className="space-y-2">
+                  <div className="space-y-1">
                     <div>
                       <Label htmlFor="names" className="form-label">
                         Professor Names
@@ -124,6 +142,7 @@ export default function GenerateEmailsPage() {
                         className="w-full form-textarea resize-y text-black"
                         value={template}
                         onChange={(e) => setTemplate(e.target.value)}
+                        rows={15}
                       />
                     </div>
                   </div>
