@@ -8,10 +8,9 @@ interface ProfessorCardProps {
   professor: Professor;
   onSwipe: (direction: 'left' | 'right') => void;
   isActive: boolean; // To control which card is on top and interactive
-  manualExitInfo?: { professorId: string, direction: 'left' | 'right' } | null;
 }
 
-export function ProfessorCard({ professor, onSwipe, isActive, manualExitInfo }: ProfessorCardProps) {
+export function ProfessorCard({ professor, onSwipe, isActive }: ProfessorCardProps) {
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-300, 300], [-25, 25]); // Reduced rotation for a subtler effect
   
@@ -73,9 +72,7 @@ export function ProfessorCard({ professor, onSwipe, isActive, manualExitInfo }: 
   // Determine the final exit direction for the custom prop for THIS card.
   // This is crucial: it must be determined based on the props/state *at the moment of exit*.
   let exitAnimationParams: { direction: 'left' | 'right' } | null = null;
-  if (manualExitInfo && manualExitInfo.professorId === professor.id) {
-    exitAnimationParams = { direction: manualExitInfo.direction };
-  } else if (dragInducedSwipeDirection) { // Fallback to drag-induced if no manual override for this card
+  if (dragInducedSwipeDirection) { // Fallback to drag-induced if no manual override for this card
     exitAnimationParams = { direction: dragInducedSwipeDirection };
   } else {
     // If neither manual nor drag-induced, means it's exiting for other reasons or without a swipe.
@@ -106,15 +103,17 @@ export function ProfessorCard({ professor, onSwipe, isActive, manualExitInfo }: 
     >
       <Card className="w-full h-full flex flex-col justify-between relative overflow-hidden shadow-xl rounded-2xl select-none">
         {/* Image */}
-        <div className="w-full h-3/5 relative">
-          <Image 
-            src={professor.image || "/placeholder.svg"} 
-            alt={professor.name} 
-            fill={true}
-            style={{ objectFit: "contain" }} // Ensures the entire image fits within the frame
-            className="pointer-events-none" // Keep existing className if it has other styles
-            priority={isActive} // Optionally prioritize loading for active card
-          />
+        <div className="w-full h-3/5 relative p-4">
+          <div className="relative w-full h-full">
+            <Image 
+              src={professor.image || "/placeholder.svg"} 
+              alt={professor.name} 
+              fill={true}
+              style={{ objectFit: "contain" }} // Ensures the entire image fits within the frame
+              className="pointer-events-none" // Keep existing className if it has other styles
+              priority={isActive} // Optionally prioritize loading for active card
+            />
+          </div>
           {/* Confirm/Deny overlays */}
           {isActive && (
             <>
