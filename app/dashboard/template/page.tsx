@@ -185,7 +185,11 @@ export default function TemplateGenerationPage() {
       // Replace mock logic with actual API call to your Python backend
       //const response = await fetch('https://pythonserver-42bcc9044f10.herokuapp.com/call-openai', { // MODIFIED URL
       //const response = await fetch('http://127.0.0.1:5000/call-openai', { // MODIFIED URL from https to http
-      const response = await fetch("http://146.190.115.1/call-openai", {
+
+      // STEP 1: Use the IP address for now to test that your backend server is working correctly.
+      //const response = await fetch("http://146.190.115.1/call-openai", {
+      // STEP 2: After your DNS record is set up and has propagated, comment out the line above and uncomment the one below.
+      const response = await fetch("https://api.manit.codes/call-openai", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -67,7 +67,7 @@ export default function SwipePage() {
       };
 
       // Fire-and-forget fetch
-      fetch("http://146.190.115.1/generate-email", {
+      fetch("https://api.manit.codes/generate-email", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

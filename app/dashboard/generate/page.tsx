@@ -51,7 +51,8 @@ export default function GenerateEmailsPage() {
       try {
         //const res = await fetch("http://127.0.0.1:5000/generate-email", {
         //const res = await fetch("https://pythonserver-42bcc9044f10.herokuapp.com/generate-email", {
-        const res = await fetch("http://146.190.115.1/generate-email", {
+        //const res = await fetch("http://146.190.115.1:5000/generate-email", {
+          const res = await fetch("https://api.manit.codes/generate-email", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
