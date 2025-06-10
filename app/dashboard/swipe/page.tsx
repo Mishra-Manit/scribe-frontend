@@ -22,11 +22,6 @@ interface UseProfessorsReturn {
   error: string | null;
 }
 
-interface ManualSwipeInfo {
-  professorId: string;
-  direction: 'left' | 'right';
-}
-
 export default function SwipePage() {
   const { 
     professors,
@@ -84,8 +79,6 @@ export default function SwipePage() {
     }
   };
 
-  const currentProfessor: Professor | null = professors.length > 0 ? professors[professors.length - 1] : null;
-
   if (!isTemplateSubmitted) {
     return (
       <ProtectedRoute>
@@ -98,10 +91,10 @@ export default function SwipePage() {
                 <h2 className="text-xl font-semibold text-gray-800 mb-3">How to Format Your Email Template</h2>
                 <p className="text-sm text-gray-700 mb-2">
                   Please use square brackets <code>[]</code> to denote parts of your template that should be personalized for each professor.
-                  For example, if you want to insert the professor's name, use <code><strong>[Professor's Name]</strong></code>.
+                  For example, if you want to insert the professor&apos;s name, use <code><strong>[Professor&apos;s Name]</strong></code>.
                 </p>
                 <p className="text-sm text-gray-700">
-                  Other placeholders you might use could be <code><strong>[University Name]</strong></code>, <code><strong>[Professor's Most Recent Research Paper]</strong></code>, etc.
+                  Other placeholders you might use could be <code><strong>[University Name]</strong></code>, <code><strong>[Professor&apos;s Most Recent Research Paper]</strong></code>, etc.
                   Ensure these placeholders are clearly marked so the system can replace them correctly.
                 </p>
               </div>
