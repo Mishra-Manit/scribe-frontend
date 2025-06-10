@@ -33,6 +33,8 @@ export default function SwipePage() {
 
   const [emailTemplate, setEmailTemplate] = useState('');
   const [isTemplateSubmitted, setTemplateSubmitted] = useState(false);
+  const [emailQueue, setEmailQueue] = useState<Professor[]>([]);
+  const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -42,6 +44,38 @@ export default function SwipePage() {
         setTemplateSubmitted(true);
     }
   }, []);
+
+  useEffect(() => {
+    if (!user || emailQueue.length === 0 || isGeneratingEmail) {
+      return;
+    }
+
+    setIsGeneratingEmail(true);
+    const professorToProcess = emailQueue[0];
+
+    const requestBody = {
+      email_template: emailTemplate,
+      name: professorToProcess.name,
+      professor_interest: "computer science",
+      userId: user.uid,
+      source: 'swipe',
+    };
+
+    fetch("https://api.manit.codes/generate-email", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    })
+    .catch(error => {
+      console.error('Failed to generate email:', error);
+    })
+    .finally(() => {
+      setEmailQueue(prevQueue => prevQueue.slice(1));
+      setIsGeneratingEmail(false);
+    });
+  }, [emailQueue, isGeneratingEmail, user, emailTemplate]);
 
   const handleTemplateSubmit = () => {
     if (emailTemplate.trim() === '') {
@@ -56,26 +90,9 @@ export default function SwipePage() {
     // Call handleSwipe immediately for optimistic UI update
     handleSwipe(direction, professor);
 
-    // Perform email generation in the background for right swipes
+    // Queue email generation for right swipes
     if (direction === 'right' && user) {
-      const requestBody = {
-        email_template: emailTemplate,
-        name: professor.name,
-        professor_interest: "computer science",
-        userId: user.uid,
-        source: 'swipe',
-      };
-
-      // Fire-and-forget fetch
-      fetch("https://api.manit.codes/generate-email", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(requestBody),
-      }).catch(error => {
-        console.error('Failed to generate email:', error);
-      });
+      setEmailQueue(prevQueue => [...prevQueue, professor]);
     }
   };
 
