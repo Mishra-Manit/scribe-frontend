@@ -268,7 +268,7 @@ export default function TemplateGenerationPage() {
                       type="file"
                       accept=".pdf,.doc,.docx,.txt"
                       onChange={handleFileChange}
-                      className="w-full h-10 px-3 py-1.5 text-gray-900 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-black hover:file:text-white active:file:bg-black active:file:text-white"
+                      className="w-full h-10 px-3 py-1.5 text-gray-900 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                     />
                     {resumeFile && <p className="mt-2 text-sm text-gray-500">Selected file: {resumeFile.name} ({resumeFile.type})</p>}
                     {isExtractingText && <p className="mt-2 text-sm text-blue-600">Extracting text from file...</p>}
