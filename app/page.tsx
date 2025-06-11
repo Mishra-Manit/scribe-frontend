@@ -49,7 +49,7 @@ export default function LandingPage() {
         </div>
 
         <p className="text-white/90 text-lg md:text-xl mb-12 max-w-2xl mx-auto">
-          One stop shop for anything cold email related
+          One stop shop for professor cold emailing
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -76,6 +76,7 @@ export default function LandingPage() {
           </button>
 
           <button
+            onClick={loginWithGoogle}
             className="inline-flex items-center justify-between px-6 py-3 bg-white text-black hover:bg-white/90 transition-colors"
           >
             Sign Up

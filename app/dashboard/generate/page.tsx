@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useAuth } from "../../../context/AuthContextProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import MobileRestriction from "@/components/MobileRestriction";
@@ -159,7 +160,11 @@ export default function GenerateEmailsPage() {
                   </Button>
                   {showMessage && (
                     <p className="text-sm text-gray-600 mt-3 text-center">
-                      Emails are being generated and will appear in the dashboard shortly.
+                      Emails are being generated. You can view them on your{" "}
+                      <Link href="/dashboard" className="text-blue-500 hover:underline">
+                        dashboard
+                      </Link>
+                      .
                     </p>
                   )}
                 </div>
