@@ -49,7 +49,7 @@ export default function LandingPage() {
         </div>
 
         <p className="text-white/90 text-lg md:text-xl mb-12 max-w-2xl mx-auto">
-          One stop shop for professor cold emailing
+          Your next research position is an email away.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
