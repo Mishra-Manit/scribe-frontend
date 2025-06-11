@@ -3,6 +3,7 @@ import "./globals.css"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { AuthContextProvider } from "../context/AuthContextProvider"
+import { EmailGenerationProvider } from "@/context/EmailGenerationProvider";
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] })
 
@@ -20,7 +21,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <AuthContextProvider>
-          {children}
+          <EmailGenerationProvider>
+            {children}
+          </EmailGenerationProvider>
         </AuthContextProvider>
       </body>
     </html>
