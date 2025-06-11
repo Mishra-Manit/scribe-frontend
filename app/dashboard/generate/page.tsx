@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "../../../context/AuthContextProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -10,14 +10,23 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { useEmailGeneration } from "@/context/EmailGenerationProvider";
 
 export default function GenerateEmailsPage() {
   const { user } = useAuth();
+  const { addItemsToQueue } = useEmailGeneration();
   const [names, setNames] = useState("");
   const [interest, setInterest] = useState("");
   const [template, setTemplate] = useState("");
   const [loading, setLoading] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
+
+  useEffect(() => {
+    const savedTemplate = localStorage.getItem('emailTemplate');
+    if (savedTemplate) {
+      setTemplate(savedTemplate);
+    }
+  }, []);
 
   const handleSubmit = async () => {
     if (!names.trim() || !interest.trim() || !template.trim()) {
@@ -33,45 +42,21 @@ export default function GenerateEmailsPage() {
     setLoading(true);
     setShowMessage(false);
     
+    localStorage.setItem('emailTemplate', template);
+
+    const professorNames = names.split(",").map(name => name.trim());
+    const itemsToQueue = professorNames.map(name => ({
+      name: name,
+      interest: interest,
+      source: 'generate' as const,
+    }));
+
+    addItemsToQueue(itemsToQueue);
+    
     // Clear the form fields
     setNames("");
     setInterest("");
     setTemplate("");
-    
-    const professorNames = names.split(",").map(name => name.trim());
-
-    for (const professorName of professorNames) {
-      const requestBody = {
-        email_template: template,
-        name: professorName,
-        professor_interest: interest,
-        userId: user.uid,
-        source: "generate"
-      };
-
-      try {
-        //const res = await fetch("http://127.0.0.1:5000/generate-email", {
-        //const res = await fetch("https://pythonserver-42bcc9044f10.herokuapp.com/generate-email", {
-        //const res = await fetch("http://146.190.115.1:5000/generate-email", {
-          const res = await fetch("https://api.manit.codes/generate-email", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestBody),
-        });
-
-        if (!res.ok) {
-          console.error("Failed to generate email for", professorName);
-          continue;
-        }
-
-        // Just wait for the response to complete, no need to parse
-        // await res.json(); // Commented out or removed
-      } catch (error) {
-        console.error("Error:", error);
-      }
-    }
     
     setLoading(false);
     setShowMessage(true);

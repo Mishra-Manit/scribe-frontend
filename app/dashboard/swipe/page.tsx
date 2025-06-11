@@ -34,7 +34,7 @@ export default function SwipePage() {
 
   const [emailTemplate, setEmailTemplate] = useState('');
   const [isTemplateSubmitted, setTemplateSubmitted] = useState(false);
-  const { addProfessorToQueue } = useEmailGeneration();
+  const { addItemsToQueue } = useEmailGeneration();
   const { user } = useAuth();
 
   useEffect(() => {
@@ -60,7 +60,11 @@ export default function SwipePage() {
 
     // Queue email generation for right swipes
     if (direction === 'right' && user) {
-      addProfessorToQueue(professor);
+      addItemsToQueue([{
+        name: professor.name,
+        interest: professor.interests.length > 0 ? professor.interests.join(', ') : 'their research',
+        source: 'swipe'
+      }]);
     }
   };
 

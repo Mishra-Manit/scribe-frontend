@@ -2,11 +2,17 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContextProvider';
-import { Professor } from '../hooks/useFirebaseProfessors';
+
+export interface GenerationQueueItem {
+  id: string;
+  name: string;
+  interest: string;
+  source: 'swipe' | 'generate';
+}
 
 interface EmailGenerationContextType {
-  addProfessorToQueue: (professor: Professor) => void;
-  emailQueue: Professor[];
+  addItemsToQueue: (items: Omit<GenerationQueueItem, 'id'>[]) => void;
+  emailQueue: GenerationQueueItem[];
 }
 
 const EmailGenerationContext = createContext<EmailGenerationContextType | undefined>(undefined);
@@ -24,7 +30,7 @@ interface EmailGenerationProviderProps {
 }
 
 export const EmailGenerationProvider: React.FC<EmailGenerationProviderProps> = ({ children }) => {
-  const [emailQueue, setEmailQueue] = useState<Professor[]>([]);
+  const [emailQueue, setEmailQueue] = useState<GenerationQueueItem[]>([]);
   const [isGeneratingEmail, setIsGeneratingEmail] = useState(false);
   const [emailTemplate, setEmailTemplate] = useState('');
   const { user } = useAuth();
@@ -68,9 +74,9 @@ export const EmailGenerationProvider: React.FC<EmailGenerationProviderProps> = (
     const requestBody = {
       email_template: template,
       name: professorToProcess.name,
-      professor_interest: "computer science",
+      professor_interest: professorToProcess.interest,
       userId: user.uid,
-      source: 'swipe',
+      source: professorToProcess.source,
     };
 
     fetch("https://api.manit.codes/generate-email", {
@@ -93,12 +99,16 @@ export const EmailGenerationProvider: React.FC<EmailGenerationProviderProps> = (
     });
   }, [emailQueue, isGeneratingEmail, user]);
 
-  const addProfessorToQueue = (professor: Professor) => {
-    setEmailQueue(prevQueue => [...prevQueue, professor]);
+  const addItemsToQueue = (items: Omit<GenerationQueueItem, 'id'>[]) => {
+    const newQueueItemsWithId = items.map(item => ({
+      ...item,
+      id: `${item.name}-${Date.now()}-${Math.random()}`
+    }));
+    setEmailQueue(prevQueue => [...prevQueue, ...newQueueItemsWithId]);
   };
 
   return (
-    <EmailGenerationContext.Provider value={{ addProfessorToQueue, emailQueue }}>
+    <EmailGenerationContext.Provider value={{ addItemsToQueue, emailQueue }}>
       {children}
     </EmailGenerationContext.Provider>
   );
