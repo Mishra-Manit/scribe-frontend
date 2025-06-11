@@ -43,9 +43,22 @@ export default function SwipePage() {
         setEmailTemplate(savedTemplate);
         setTemplateSubmitted(true);
     }
+    const savedQueue = localStorage.getItem('emailQueue');
+    if (savedQueue) {
+      try {
+        const parsedQueue = JSON.parse(savedQueue);
+        if (Array.isArray(parsedQueue)) {
+          setEmailQueue(parsedQueue);
+        }
+      } catch (error) {
+        console.error("Failed to parse email queue from localStorage", error);
+      }
+    }
   }, []);
 
   useEffect(() => {
+    localStorage.setItem('emailQueue', JSON.stringify(emailQueue));
+
     if (!user || emailQueue.length === 0 || isGeneratingEmail) {
       return;
     }
