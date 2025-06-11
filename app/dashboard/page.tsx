@@ -10,6 +10,7 @@ import { db } from "../../config/firebase";
 import { collection, onSnapshot, Timestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
+import { useEmailGeneration } from "@/context/EmailGenerationProvider";
 
 interface EmailHistory {
   id: string;
@@ -23,6 +24,7 @@ interface EmailHistory {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { emailQueue } = useEmailGeneration();
   const [emailCount, setEmailCount] = useState(0);
   const [emailHistory, setEmailHistory] = useState<EmailHistory[]>([]);
   const [hoveredEmailId, setHoveredEmailId] = useState<string | null>(null);
@@ -169,10 +171,21 @@ export default function DashboardPage() {
                     </svg>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold text-green-600">Active</div>
-                    <p className="text-xs text-muted-foreground">
-                      Ready to generate
-                    </p>
+                    {emailQueue.length > 0 ? (
+                      <>
+                        <div className="text-2xl font-bold text-yellow-600">Generating...</div>
+                        <p className="text-xs text-muted-foreground">
+                          {emailQueue.length} emails in queue
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-2xl font-bold text-green-600">All emails generated</div>
+                        <p className="text-xs text-muted-foreground">
+                          Queue is empty
+                        </p>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>
