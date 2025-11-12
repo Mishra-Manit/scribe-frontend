@@ -1,6 +1,12 @@
+/**
+ * DEPRECATED: This Header component was designed for the swipe feature.
+ * The swipe feature is no longer being used and this component will be removed in a future update.
+ * This file is kept temporarily for reference but should not be used going forward.
+ */
+
 import React from 'react';
 
-// Assuming Professor type might be useful here in the future, 
+// Assuming Professor type might be useful here in the future,
 // or that acceptedProfessors could have more properties of Professor.
 // For now, your provided interface is sufficient.
 interface AcceptedProfessorDisplay {

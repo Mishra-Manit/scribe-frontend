@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import * as pdfjsLib from 'pdfjs-dist';
+import { API_ENDPOINTS } from '@/config/api';
 
 // Specify the workerSrc for pdfjs-dist
 // pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -189,7 +190,7 @@ export default function TemplateGenerationPage() {
       // STEP 1: Use the IP address for now to test that your backend server is working correctly.
       //const response = await fetch("http://146.190.115.1/call-openai", {
       // STEP 2: After your DNS record is set up and has propagated, comment out the line above and uncomment the one below.
-      const response = await fetch("https://api.manit.codes/call-openai", {
+      const response = await fetch(API_ENDPOINTS.callOpenAI, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

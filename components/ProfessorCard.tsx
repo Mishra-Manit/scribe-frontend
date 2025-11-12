@@ -1,3 +1,9 @@
+/**
+ * DEPRECATED: This ProfessorCard component was designed for the swipe feature.
+ * The swipe feature is no longer being used and this component will be removed in a future update.
+ * This file is kept temporarily for reference but should not be used going forward.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import Image from 'next/image';

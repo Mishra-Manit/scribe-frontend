@@ -2,11 +2,13 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContextProvider';
+import { API_ENDPOINTS } from '@/config/api';
 
 export interface GenerationQueueItem {
   id: string;
   name: string;
   interest: string;
+  // DEPRECATED: 'swipe' source is no longer used as the swipe feature has been discontinued
   source: 'swipe' | 'generate';
 }
 
@@ -79,7 +81,7 @@ export const EmailGenerationProvider: React.FC<EmailGenerationProviderProps> = (
       source: professorToProcess.source,
     };
 
-    fetch("https://api.manit.codes/generate-email", {
+    fetch(API_ENDPOINTS.generateEmail, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

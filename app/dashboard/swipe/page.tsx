@@ -1,3 +1,9 @@
+/**
+ * DEPRECATED: This swipe feature is no longer being used and will be removed in a future update.
+ * The swipe functionality has been discontinued as part of the project's direction change.
+ * This file is kept temporarily for reference but should not be used going forward.
+ */
+
 "use client";
 
 import React, { useState, useEffect } from 'react';

@@ -1,22 +1,34 @@
-# Frontend Code Quality Improvements
+# Scribe - Code Quality Improvements
 
-> Comprehensive review and recommendations for the Scribe codebase
+> Comprehensive review and recommendations for the Scribe codebase (Frontend & Backend)
 
 ---
 
 ## Table of Contents
 
+### Overview
 1. [Executive Summary](#executive-summary)
-2. [Critical Issues](#critical-issues)
-3. [Folder Structure](#folder-structure)
-4. [Type System](#type-system)
-5. [State Management](#state-management)
-6. [API Layer](#api-layer)
-7. [Component Organization](#component-organization)
-8. [Error Handling](#error-handling)
-9. [Code Quality Issues](#code-quality-issues)
-10. [Learning Resources](#learning-resources)
-11. [Prioritized Action Plan](#prioritized-action-plan)
+2. [Architecture Overview](#architecture-overview)
+
+### 🎨 Frontend Improvements (Next.js/React)
+3. [Frontend: State Management](#frontend-state-management)
+4. [Frontend: Custom Hooks](#frontend-custom-hooks)
+5. [Frontend: Component Organization](#frontend-component-organization)
+6. [Frontend: Error Handling](#frontend-error-handling)
+7. [Frontend: Code Quality](#frontend-code-quality)
+
+### ⚙️ Backend Improvements (Python/FastAPI)
+8. [Backend: Database Architecture](#backend-database-architecture)
+9. [Backend: API Service Layer](#backend-api-service-layer)
+10. [Backend: Authentication Service](#backend-authentication-service)
+11. [Backend: Data Models & Validation](#backend-data-models-validation)
+
+### 🔗 Shared/Cross-Cutting Concerns
+12. [Security & Environment Configuration](#security-environment)
+13. [Type System & Shared Types](#type-system)
+14. [Project Structure](#project-structure)
+15. [Learning Resources](#learning-resources)
+16. [Prioritized Action Plan](#prioritized-action-plan)
 
 ---
 
@@ -24,89 +36,428 @@
 
 **Project:** Scribe - Cold email generation platform for reaching out to research professors
 
-**Tech Stack:** Next.js 15, React 19, TypeScript, Tailwind CSS, Firebase, Framer Motion
+**Tech Stack:**
+- **Frontend:** Next.js 15, React 19, TypeScript, Tailwind CSS, Framer Motion, shadcn/ui
+- **Backend:** Python, FastAPI (separate directory)
+- **Database:** Supabase/PostgreSQL
+- **Authentication:** Firebase Auth (migrating to Supabase)
 
 **Overall Assessment:** Functional MVP with good foundation, but needs architectural improvements for scalability and maintainability.
 
 **Strengths:**
-- Modern tech stack
-- TypeScript enabled
+- Modern tech stack (frontend and backend)
+- TypeScript enabled on frontend
 - Good use of custom hooks
 - Clean UI with shadcn/ui
-- Real-time Firebase integration
+- Separation of frontend and backend concerns
 
 **Key Areas for Improvement:**
-- Security vulnerabilities (exposed API keys)
-- Type safety issues (`any` types)
-- Scattered code organization
-- No centralized API layer
-- Missing error boundaries
+- **Frontend:** State management, error boundaries, type safety
+- **Backend:** Database service layer, API documentation, validation
+- **Shared:** Security (exposed API keys), centralized type definitions
 
 ---
 
-## Critical Issues
+## Architecture Overview
 
-### 🚨 1. Security: Exposed Firebase Credentials
+### Current Architecture
 
-**Location:** `config/firebase.ts`
-
-**Issue:**
-```typescript
-const firebaseConfig = {
-  apiKey: "AIzaSyC3kECw6Ka7weVqz8kjzB-DlwWUxrbL3rI",  // EXPOSED!
-  authDomain: "coldauth-a5caf.firebaseapp.com",
-  projectId: "coldauth-a5caf",
-  // ...
-};
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Scribe Application                       │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────────────┐         ┌──────────────────────┐ │
+│  │  Frontend (This Dir) │────────▶│  Backend (Separate)  │ │
+│  │  Next.js 15 + React  │  HTTP   │  Python + FastAPI    │ │
+│  │  TypeScript          │         │                      │ │
+│  └──────────────────────┘         └──────────────────────┘ │
+│           │                                  │              │
+│           │                                  │              │
+│           ▼                                  ▼              │
+│  ┌──────────────────────┐         ┌──────────────────────┐ │
+│  │  State Management    │         │  Database Layer      │ │
+│  │  Zustand + Context   │         │  Supabase/PostgreSQL │ │
+│  └──────────────────────┘         └──────────────────────┘ │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Why This Is Bad:**
-- API keys are committed to source control
-- Visible to anyone who clones the repository
-- Security risk if repo is public
+### Responsibilities
 
-**Solution:**
+**Frontend (Next.js/React - This Directory):**
+- UI components and layouts
+- Client-side state management (Zustand, Context API)
+- Form validation and user interactions
+- API calls to backend
+- Real-time UI updates
+- Routing and navigation
 
-1. Create `.env.local` file (add to `.gitignore`):
+**Backend (Python/FastAPI - Separate Directory):**
+- Database operations (CRUD)
+- Business logic and validation
+- Authentication and authorization
+- API endpoints
+- Email generation service
+- Professor data management
+
+**Shared Concerns:**
+- TypeScript type definitions (generated from backend schemas)
+- Environment configuration
+- Security best practices
+- Error handling strategies
+
+---
+
+---
+
+## 🎨 FRONTEND IMPROVEMENTS
+
+> This section covers improvements specific to the Next.js/React frontend application.
+> The frontend handles UI components, client-side state, routing, and API consumption.
+
+---
+
+<a name="frontend-state-management"></a>
+## 3. Frontend: State Management
+
+**Overview:** Client-side state management in the React application using Zustand and Context API.
+
+### Current Approach
+
+**Technologies Used:**
+- React Context API (AuthContext, EmailGenerationProvider)
+- useState for local state
+- localStorage for persistence (scattered)
+
+### Current Issues
+
+**Firebase vs Supabase Confusion:**
+- Firebase config (`config/firebase.ts`) has been **deleted** but is still imported in code
+- Supabase config exists (`config/supabase.ts`) but is **not being used**
+- Application is in a **broken state** - imports reference deleted files
+- Auth context still uses Firebase authentication
+- Dashboard queries still use Firestore
+
+**Why Migrate to Supabase:**
+- ✅ Modern PostgreSQL database (better than NoSQL for this use case)
+- ✅ Built-in Row Level Security (RLS)
+- ✅ Real-time subscriptions
+- ✅ Better TypeScript support with generated types
+- ✅ RESTful API and real-time out of the box
+- ✅ Easier local development
+
+### Migration Steps
+
+#### Phase 1: Database Schema Setup
+
+**Create Supabase Tables:**
+
+```sql
+-- Users table
+CREATE TABLE users (
+  id UUID REFERENCES auth.users PRIMARY KEY,
+  email TEXT NOT NULL,
+  display_name TEXT,
+  photo_url TEXT,
+  student_info TEXT,
+  generation_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Professors table
+CREATE TABLE professors (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  university TEXT NOT NULL,
+  interests TEXT[] NOT NULL,
+  image_url TEXT,
+  status TEXT DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Accepted professors table (user-specific)
+CREATE TABLE accepted_professors (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  professor_id UUID REFERENCES professors(id) ON DELETE CASCADE,
+  interest TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(user_id, professor_id)
+);
+
+-- Emails table (email history)
+CREATE TABLE emails (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  professor_name TEXT NOT NULL,
+  professor_interest TEXT NOT NULL,
+  email_message TEXT NOT NULL,
+  source TEXT CHECK (source IN ('generate')),
+  status TEXT DEFAULT 'completed',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create indexes for performance
+CREATE INDEX idx_emails_user_id ON emails(user_id);
+CREATE INDEX idx_emails_created_at ON emails(created_at DESC);
+CREATE INDEX idx_accepted_professors_user_id ON accepted_professors(user_id);
+CREATE INDEX idx_professors_status ON professors(status);
+
+-- Enable Row Level Security
+ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE emails ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accepted_professors ENABLE ROW LEVEL SECURITY;
+ALTER TABLE professors ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies
+CREATE POLICY "Users can view own data" ON users
+  FOR SELECT USING (auth.uid() = id);
+
+CREATE POLICY "Users can update own data" ON users
+  FOR UPDATE USING (auth.uid() = id);
+
+CREATE POLICY "Users can view own emails" ON emails
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own emails" ON emails
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own accepted professors" ON accepted_professors
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own accepted professors" ON accepted_professors
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Anyone can view pending professors" ON professors
+  FOR SELECT USING (status = 'pending');
+```
+
+#### Phase 2: Supabase Auth Implementation
+
+**Update `config/supabase.ts`:**
+```typescript
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/supabase';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase environment variables');
+}
+
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+```
+
+**Create `.env.local`:**
 ```env
-NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_domain
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_bucket
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ```
 
-2. Update `config/firebase.ts`:
-```typescript
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID!,
-};
-```
+#### Phase 3: Auth Service Layer
 
-3. Add validation:
+**Create `services/supabase/auth.service.ts`:**
 ```typescript
-const requiredEnvVars = [
-  'NEXT_PUBLIC_FIREBASE_API_KEY',
-  'NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN',
-  // ... others
-];
+import { supabase } from '@/config/supabase';
+import type { User, AuthError } from '@supabase/supabase-js';
 
-requiredEnvVars.forEach(envVar => {
-  if (!process.env[envVar]) {
-    throw new Error(`Missing required environment variable: ${envVar}`);
+class AuthService {
+  /**
+   * Sign in with Google OAuth
+   */
+  async signInWithGoogle() {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+
+    if (error) throw error;
+    return data;
   }
-});
+
+  /**
+   * Sign out current user
+   */
+  async signOut() {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  }
+
+  /**
+   * Get current session
+   */
+  async getSession() {
+    const { data, error } = await supabase.auth.getSession();
+    if (error) throw error;
+    return data.session;
+  }
+
+  /**
+   * Listen to auth state changes
+   */
+  onAuthStateChange(callback: (user: User | null) => void) {
+    return supabase.auth.onAuthStateChange((event, session) => {
+      callback(session?.user ?? null);
+    });
+  }
+}
+
+export const authService = new AuthService();
 ```
 
-**Priority:** 🔴 CRITICAL - Fix immediately
+#### Phase 4: Database Service Layer
+
+**Create `services/supabase/database.service.ts`:**
+```typescript
+import { supabase } from '@/config/supabase';
+import type { Professor, Email, AcceptedProfessor } from '@/types';
+
+class DatabaseService {
+  /**
+   * Fetch user's email history
+   */
+  async getEmailHistory(userId: string) {
+    const { data, error } = await supabase
+      .from('emails')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data as Email[];
+  }
+
+  /**
+   * Create new email record
+   */
+  async createEmail(userId: string, email: Omit<Email, 'id' | 'user_id' | 'created_at'>) {
+    const { data, error } = await supabase
+      .from('emails')
+      .insert({
+        user_id: userId,
+        ...email,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data as Email;
+  }
+
+  /**
+   * Get pending professors
+   */
+  async getPendingProfessors() {
+    const { data, error } = await supabase
+      .from('professors')
+      .select('*')
+      .eq('status', 'pending');
+
+    if (error) throw error;
+    return data as Professor[];
+  }
+
+  /**
+   * Accept a professor
+   */
+  async acceptProfessor(userId: string, professorId: string, interest: string) {
+    const { data, error } = await supabase
+      .from('accepted_professors')
+      .insert({
+        user_id: userId,
+        professor_id: professorId,
+        interest,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Get user's accepted professors
+   */
+  async getAcceptedProfessors(userId: string) {
+    const { data, error } = await supabase
+      .from('accepted_professors')
+      .select(`
+        *,
+        professors (
+          name,
+          university,
+          image_url
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  }
+
+  /**
+   * Subscribe to email history changes (real-time)
+   */
+  subscribeToEmailHistory(userId: string, callback: (emails: Email[]) => void) {
+    return supabase
+      .channel(`emails:${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'emails',
+          filter: `user_id=eq.${userId}`,
+        },
+        async () => {
+          const emails = await this.getEmailHistory(userId);
+          callback(emails);
+        }
+      )
+      .subscribe();
+  }
+}
+
+export const databaseService = new DatabaseService();
+```
+
+#### Phase 5: Generate TypeScript Types
+
+**Install Supabase CLI:**
+```bash
+npm install -D supabase
+```
+
+**Generate types:**
+```bash
+npx supabase gen types typescript --project-id your-project-id > types/supabase.ts
+```
+
+This generates type-safe database schemas automatically!
+
+#### Phase 6: Migration Checklist
+
+- [ ] Create Supabase project and set up database schema
+- [ ] Enable Google OAuth in Supabase dashboard
+- [ ] Add environment variables to `.env.local`
+- [ ] Generate TypeScript types from Supabase schema
+- [ ] Create auth service layer
+- [ ] Create database service layer
+- [ ] Remove all Firebase imports
+- [ ] Delete `config/firebase.ts` references
+- [ ] Update auth context to use Supabase (or migrate to Zustand)
+- [ ] Update all Firestore queries to Supabase queries
+- [ ] Test authentication flow
+- [ ] Test database operations
+- [ ] Migrate existing Firebase data (if needed)
+
+**Priority:** 🔴 CRITICAL - Fix broken imports first, then migrate
 
 ---
 
@@ -250,7 +601,84 @@ Use in layout:
 
 ---
 
-## Folder Structure
+---
+
+## 🔗 SHARED / CROSS-CUTTING CONCERNS
+
+> This section covers improvements that affect both frontend and backend,
+> or are general architectural concerns that apply to the entire application.
+
+---
+
+<a name="security-environment"></a>
+## 12. Security & Environment Configuration
+
+**Overview:** Critical security issues and environment configuration for both frontend and backend.
+
+### 🚨 CRITICAL: Exposed Credentials
+
+**Issue:**
+```typescript
+const firebaseConfig = {
+  apiKey: "AIzaSyC3kECw6Ka7weVqz8kjzB-DlwWUxrbL3rI",  // EXPOSED!
+  authDomain: "coldauth-a5caf.firebaseapp.com",
+  projectId: "coldauth-a5caf",
+  // ...
+};
+```
+
+**Why This Is Bad:**
+- API keys are committed to source control
+- Visible to anyone who clones the repository
+- Security risk if repo is public
+
+**Solution for Frontend:**
+
+1. Create `.env.local` file (add to `.gitignore`):
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_domain
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_bucket
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
+```
+
+2. Update `config/firebase.ts`:
+```typescript
+const firebaseConfig = {
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY!,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN!,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET!,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID!,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID!,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID!,
+};
+```
+
+**Solution for Backend (Python/FastAPI):**
+
+Create `.env` file in backend directory:
+```env
+DATABASE_URL=your_supabase_connection_string
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+OPENAI_API_KEY=your_openai_key
+SECRET_KEY=your_secret_key
+```
+
+**Priority:** 🔴 CRITICAL - Fix immediately
+
+---
+
+<a name="project-structure"></a>
+## 14. Project Structure
+
+**Overview:** Recommended folder structure and organization for the frontend codebase.
+
+### Frontend Folder Structure
 
 ### Current Structure
 
@@ -268,7 +696,7 @@ Use in layout:
 └── public/                ⚠️ Disorganized
 ```
 
-### Recommended Professional Structure
+### Recommended Professional Structure (Updated for Supabase + Zustand)
 
 ```
 /scribe
@@ -279,8 +707,7 @@ Use in layout:
 │   │   ├── layout.tsx         # Dashboard layout with ProtectedRoute
 │   │   ├── page.tsx           # Main dashboard
 │   │   ├── generate/
-│   │   ├── template/
-│   │   └── swipe/
+│   │   └── template/
 │   ├── mentorship/
 │   ├── layout.tsx             # Root layout
 │   ├── globals.css
@@ -318,36 +745,40 @@ Use in layout:
 │       └── LoadingSpinner.tsx
 │
 ├── hooks/                     # Custom React hooks
-│   ├── useAuth.ts            # Could move from context
-│   ├── useProfessors.ts
-│   ├── useFirebaseProfessors.ts
-│   └── usePersistedAcceptedProfessors.ts
+│   ├── useAuth.ts            # ✨ NEW: Auth state from Zustand
+│   ├── useEmailQueue.ts      # ✨ NEW: Email queue operations
+│   ├── useProfessors.ts      # ✨ NEW: Professor data management
+│   ├── useSupabaseQuery.ts   # ✨ NEW: Generic Supabase query hook
+│   └── useSupabaseRealtime.ts # ✨ NEW: Realtime subscriptions
 │
-├── context/                   # React Context providers
-│   ├── AuthContextProvider.tsx
-│   ├── EmailGenerationProvider.tsx
-│   └── index.ts              # Export all contexts
+├── context/                   # React Context providers (DEPRECATED - migrate to Zustand)
+│   ├── AuthContextProvider.tsx    # ❌ DELETE after migration
+│   ├── EmailGenerationProvider.tsx # ❌ DELETE after migration
+│   └── index.ts              # ❌ DELETE after migration
 │
-├── stores/                    # Zustand stores (if using)
-│   ├── authStore.ts
-│   ├── emailQueueStore.ts
-│   └── professorStore.ts
+├── stores/                    # ✨ NEW: Zustand stores
+│   ├── authStore.ts          # Auth state (replaces AuthContext)
+│   ├── emailQueueStore.ts    # Email queue state (replaces EmailGenerationContext)
+│   ├── professorStore.ts     # Professor data state
+│   └── index.ts              # Export all stores
 │
-├── services/                  # API and business logic
-│   ├── api/
-│   │   ├── email.service.ts
-│   │   ├── professor.service.ts
+├── services/                  # ✨ NEW: API and business logic layer
+│   ├── api/                  # External API calls (api.manit.codes)
+│   │   ├── client.ts         # Base API client with error handling
+│   │   ├── email.service.ts  # Email generation API
 │   │   └── types.ts          # API-specific types
-│   ├── firebase/
-│   │   ├── firestore.service.ts
-│   │   └── auth.service.ts
+│   │
+│   ├── supabase/             # ✨ NEW: Supabase operations
+│   │   ├── auth.service.ts   # Authentication service
+│   │   ├── database.service.ts # Database queries
+│   │   └── realtime.service.ts # Real-time subscriptions
+│   │
 │   └── index.ts              # Export all services
 │
 ├── lib/                       # Utilities and helpers
 │   ├── utils.ts              # General utilities (cn, etc.)
-│   ├── firebase.ts           # Firebase utilities
 │   ├── validation.ts         # Form validation helpers
-│   ├── storage.ts            # localStorage wrapper
+│   ├── storage.ts            # localStorage wrapper (Zustand middleware)
 │   ├── constants.ts          # App constants
 │   └── errors.ts             # Error handling utilities
 │
@@ -357,10 +788,11 @@ Use in layout:
 │   ├── professor.ts          # Professor types
 │   ├── email.ts              # Email types
 │   ├── api.ts                # API request/response types
-│   └── firebase.ts           # Firebase document types
+│   ├── supabase.ts           # ✨ NEW: Auto-generated Supabase types
+│   └── stores.ts             # ✨ NEW: Zustand store types
 │
 ├── config/                    # Configuration files
-│   ├── firebase.ts           # Firebase config (use env vars!)
+│   ├── supabase.ts           # ✨ NEW: Supabase client config
 │   ├── constants.ts          # App-wide constants
 │   └── routes.ts             # Route definitions
 │
@@ -388,7 +820,10 @@ Use in layout:
 
 ---
 
-## Type System
+<a name="type-system"></a>
+## 13. Type System & Shared Types
+
+**Overview:** TypeScript type definitions shared between frontend and backend (can be generated from backend schemas).
 
 ### Current Issues
 
@@ -468,7 +903,7 @@ export interface ProfessorInteraction {
 ```typescript
 import { Timestamp } from 'firebase/firestore';
 
-export type EmailSource = 'swipe' | 'generate';
+export type EmailSource = 'generate';
 export type EmailStatus = 'pending' | 'completed' | 'failed';
 
 export interface EmailHistory {
@@ -554,7 +989,7 @@ export interface EmailDocument {
   professor_name: string;
   professor_interest: string;
   email_message: string;
-  source: 'swipe' | 'generate';
+  source: 'generate';
   created_at: Timestamp;
   status: 'pending' | 'completed' | 'failed';
 }
@@ -609,7 +1044,9 @@ type Result =
 
 ---
 
-## State Management
+## 3. Frontend: State Management
+
+**Overview:** Client-side state management using Zustand and Context API for the React frontend.
 
 ### Current Approach
 
@@ -649,7 +1086,7 @@ Context is **not ideal** for:
 - ✅ Simpler API than Redux
 - ✅ Better performance than Context
 
-#### Example: Auth Store with Zustand
+#### Implementation: Auth Store with Zustand + Supabase
 
 **Installation:**
 ```bash
@@ -659,111 +1096,176 @@ npm install zustand
 **Create `stores/authStore.ts`:**
 ```typescript
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { auth } from '@/config/firebase';
-import type { User } from '@/types';
+import { devtools, persist } from 'zustand/middleware';
+import { supabase } from '@/config/supabase';
+import { authService } from '@/services/supabase/auth.service';
+import type { User } from '@supabase/supabase-js';
 
 interface AuthState {
   // State
   user: User | null;
   loading: boolean;
+  error: string | null;
 
   // Actions
   setUser: (user: User | null) => void;
   setLoading: (loading: boolean) => void;
-  logout: () => Promise<void>;
-  initializeAuth: () => void;
+  setError: (error: string | null) => void;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+  initializeAuth: () => () => void; // Returns cleanup function
 }
 
 export const useAuthStore = create<AuthState>()(
   devtools(
-    (set) => ({
-      // Initial state
-      user: null,
-      loading: true,
+    persist(
+      (set, get) => ({
+        // Initial state
+        user: null,
+        loading: true,
+        error: null,
 
-      // Actions
-      setUser: (user) => set({ user }, false, 'setUser'),
+        // Actions
+        setUser: (user) => set({ user, error: null }, false, 'setUser'),
 
-      setLoading: (loading) => set({ loading }, false, 'setLoading'),
+        setLoading: (loading) => set({ loading }, false, 'setLoading'),
 
-      logout: async () => {
-        await signOut(auth);
-        set({ user: null }, false, 'logout');
-      },
+        setError: (error) => set({ error }, false, 'setError'),
 
-      initializeAuth: () => {
-        onAuthStateChanged(auth, (firebaseUser) => {
-          if (firebaseUser) {
-            set({
-              user: {
-                uid: firebaseUser.uid,
-                email: firebaseUser.email,
-                displayName: firebaseUser.displayName,
-                photoURL: firebaseUser.photoURL,
-              },
-              loading: false,
-            }, false, 'authStateChanged');
-          } else {
-            set({ user: null, loading: false }, false, 'authStateChanged');
+        signInWithGoogle: async () => {
+          try {
+            set({ loading: true, error: null }, false, 'signInWithGoogle:start');
+            await authService.signInWithGoogle();
+            // Auth state will be updated by the listener
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to sign in';
+            set({ error: errorMessage, loading: false }, false, 'signInWithGoogle:error');
+            throw error;
           }
-        });
-      },
-    }),
+        },
+
+        signOut: async () => {
+          try {
+            set({ loading: true, error: null }, false, 'signOut:start');
+            await authService.signOut();
+            set({ user: null, loading: false }, false, 'signOut:complete');
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to sign out';
+            set({ error: errorMessage, loading: false }, false, 'signOut:error');
+            throw error;
+          }
+        },
+
+        initializeAuth: () => {
+          // Set up auth state listener
+          const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+              const user = session?.user ?? null;
+              set({ user, loading: false }, false, `authStateChange:${event}`);
+            }
+          );
+
+          // Check initial session
+          authService.getSession().then(session => {
+            set({ user: session?.user ?? null, loading: false }, false, 'initAuth:session');
+          });
+
+          // Return cleanup function
+          return () => {
+            subscription.unsubscribe();
+          };
+        },
+      }),
+      {
+        name: 'auth-storage',
+        // Only persist user data, not loading/error states
+        partialize: (state) => ({ user: state.user }),
+      }
+    ),
     { name: 'AuthStore' }
   )
 );
+
+// Selectors for common use cases
+export const selectUser = (state: AuthState) => state.user;
+export const selectIsAuthenticated = (state: AuthState) => !!state.user;
+export const selectIsLoading = (state: AuthState) => state.loading;
 ```
 
-**Usage:**
+**Initialize in `app/layout.tsx`:**
 ```typescript
-// In root layout
 "use client";
 
 import { useEffect } from 'react';
 import { useAuthStore } from '@/stores/authStore';
 
-export default function RootLayout({ children }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    useAuthStore.getState().initializeAuth();
+    // Initialize auth and get cleanup function
+    const cleanup = useAuthStore.getState().initializeAuth();
+
+    // Cleanup on unmount
+    return cleanup;
   }, []);
 
-  return <html>{children}</html>;
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
 }
+```
 
-// In any component
-import { useAuthStore } from '@/stores/authStore';
+**Usage in components:**
+```typescript
+import { useAuthStore, selectUser, selectIsAuthenticated } from '@/stores/authStore';
 
 function Navbar() {
-  // Only re-renders when user changes
-  const user = useAuthStore(state => state.user);
-  const logout = useAuthStore(state => state.logout);
+  // Only re-renders when user changes (optimized selector)
+  const user = useAuthStore(selectUser);
+  const signOut = useAuthStore(state => state.signOut);
 
   return (
     <div>
-      {user?.displayName}
-      <button onClick={logout}>Logout</button>
+      {user?.email}
+      <button onClick={signOut}>Logout</button>
     </div>
   );
 }
 
-// Access without re-render
-const userId = useAuthStore.getState().user?.uid;
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const isAuthenticated = useAuthStore(selectIsAuthenticated);
+  const loading = useAuthStore(selectIsLoading);
+
+  if (loading) return <div>Loading...</div>;
+  if (!isAuthenticated) return <Navigate to="/" />;
+
+  return <>{children}</>;
+}
+
+// Access state without causing re-render
+function someUtilFunction() {
+  const userId = useAuthStore.getState().user?.id;
+  return userId;
+}
 ```
 
-#### Example: Email Queue Store with Persistence
+#### Implementation: Email Queue Store with Persistence
 
 **Create `stores/emailQueueStore.ts`:**
 ```typescript
 import { create } from 'zustand';
 import { persist, devtools } from 'zustand/middleware';
+import { emailService } from '@/services/api/email.service';
+import { databaseService } from '@/services/supabase/database.service';
 import type { GenerationQueueItem } from '@/types';
 
 interface EmailQueueState {
   // State
   queue: GenerationQueueItem[];
   isGenerating: boolean;
+  currentlyProcessing: string | null;
+  error: string | null;
 
   // Actions
   addToQueue: (item: Omit<GenerationQueueItem, 'id' | 'status'>) => void;
@@ -771,15 +1273,18 @@ interface EmailQueueState {
   updateQueueItemStatus: (id: string, status: GenerationQueueItem['status']) => void;
   setIsGenerating: (isGenerating: boolean) => void;
   clearQueue: () => void;
+  processQueue: (userId: string, template: string, studentInfo: string) => Promise<void>;
 }
 
 export const useEmailQueueStore = create<EmailQueueState>()(
   devtools(
     persist(
-      (set) => ({
+      (set, get) => ({
         // Initial state
         queue: [],
         isGenerating: false,
+        currentlyProcessing: null,
+        error: null,
 
         // Actions
         addToQueue: (item) => set((state) => ({
@@ -790,7 +1295,8 @@ export const useEmailQueueStore = create<EmailQueueState>()(
               id: crypto.randomUUID(),
               status: 'pending' as const,
             }
-          ]
+          ],
+          error: null,
         }), false, 'addToQueue'),
 
         removeFromQueue: (id) => set((state) => ({
@@ -806,41 +1312,263 @@ export const useEmailQueueStore = create<EmailQueueState>()(
         setIsGenerating: (isGenerating) =>
           set({ isGenerating }, false, 'setIsGenerating'),
 
-        clearQueue: () => set({ queue: [] }, false, 'clearQueue'),
+        clearQueue: () => set({
+          queue: [],
+          error: null
+        }, false, 'clearQueue'),
+
+        // Process all pending items in queue
+        processQueue: async (userId, template, studentInfo) => {
+          const state = get();
+
+          if (state.isGenerating) {
+            console.log('Queue is already being processed');
+            return;
+          }
+
+          const pendingItems = state.queue.filter(item => item.status === 'pending');
+
+          if (pendingItems.length === 0) {
+            console.log('No pending items in queue');
+            return;
+          }
+
+          set({ isGenerating: true, error: null }, false, 'processQueue:start');
+
+          for (const item of pendingItems) {
+            try {
+              set({ currentlyProcessing: item.id }, false, 'processQueue:processing');
+
+              // Update status to processing
+              get().updateQueueItemStatus(item.id, 'pending');
+
+              // Generate email
+              const response = await emailService.generateEmail({
+                professorName: item.name,
+                professorInterest: item.interest,
+                studentInfo,
+                template,
+              });
+
+              if (response.success && response.email) {
+                // Save to Supabase
+                await databaseService.createEmail(userId, {
+                  professor_name: item.name,
+                  professor_interest: item.interest,
+                  email_message: response.email,
+                  source: 'generate',
+                  status: 'completed',
+                });
+
+                // Update queue item status
+                get().updateQueueItemStatus(item.id, 'completed');
+              } else {
+                throw new Error('Email generation failed');
+              }
+
+            } catch (error) {
+              console.error(`Failed to generate email for ${item.name}:`, error);
+              get().updateQueueItemStatus(item.id, 'failed');
+              set({
+                error: `Failed to generate email for ${item.name}`
+              }, false, 'processQueue:error');
+            }
+          }
+
+          set({
+            isGenerating: false,
+            currentlyProcessing: null
+          }, false, 'processQueue:complete');
+
+          // Remove completed items after a delay
+          setTimeout(() => {
+            set((state) => ({
+              queue: state.queue.filter(item => item.status !== 'completed')
+            }), false, 'processQueue:cleanup');
+          }, 3000);
+        },
       }),
       {
-        name: 'email-queue-storage', // localStorage key
-        // Only persist queue, not isGenerating
+        name: 'email-queue-storage',
+        // Only persist queue, not runtime states
         partialize: (state) => ({ queue: state.queue }),
       }
     ),
     { name: 'EmailQueueStore' }
   )
 );
+
+// Selectors
+export const selectQueue = (state: EmailQueueState) => state.queue;
+export const selectQueueLength = (state: EmailQueueState) => state.queue.length;
+export const selectPendingCount = (state: EmailQueueState) =>
+  state.queue.filter(item => item.status === 'pending').length;
+export const selectIsGenerating = (state: EmailQueueState) => state.isGenerating;
 ```
 
 **Usage:**
 ```typescript
-import { useEmailQueueStore } from '@/stores/emailQueueStore';
+import { useEmailQueueStore, selectQueue, selectIsGenerating } from '@/stores/emailQueueStore';
+import { useAuthStore } from '@/stores/authStore';
 
-function SwipePage() {
-  const addToQueue = useEmailQueueStore(state => state.addToQueue);
-  const queue = useEmailQueueStore(state => state.queue);
+function GeneratePage() {
+  const processQueue = useEmailQueueStore(state => state.processQueue);
+  const isGenerating = useEmailQueueStore(selectIsGenerating);
+  const user = useAuthStore(state => state.user);
+  const [template, setTemplate] = useState('');
+  const [studentInfo, setStudentInfo] = useState('');
 
-  const handleAccept = (professor: Professor, interest: string) => {
-    addToQueue({
-      name: professor.name,
-      interest: interest,
-    });
+  const handleGenerate = async () => {
+    if (!user) return;
+
+    await processQueue(user.id, template, studentInfo);
   };
 
   return (
     <div>
-      <p>Queue: {queue.length} emails</p>
-      {/* ... */}
+      <button onClick={handleGenerate} disabled={isGenerating}>
+        {isGenerating ? 'Generating...' : 'Generate Emails'}
+      </button>
     </div>
   );
 }
+```
+
+#### Implementation: Professor Store
+
+**Create `stores/professorStore.ts`:**
+```typescript
+import { create } from 'zustand';
+import { devtools, persist } from 'zustand/middleware';
+import { databaseService } from '@/services/supabase/database.service';
+import type { Professor, AcceptedProfessor } from '@/types';
+
+interface ProfessorState {
+  // State
+  professors: Professor[];
+  acceptedProfessors: AcceptedProfessor[];
+  currentProfessorIndex: number;
+  loading: boolean;
+  error: string | null;
+
+  // Actions
+  fetchProfessors: () => Promise<void>;
+  fetchAcceptedProfessors: (userId: string) => Promise<void>;
+  acceptProfessor: (userId: string, professor: Professor, interest: string) => Promise<void>;
+  rejectProfessor: (professor: Professor) => void;
+  nextProfessor: () => void;
+  reset: () => void;
+}
+
+export const useProfessorStore = create<ProfessorState>()(
+  devtools(
+    persist(
+      (set, get) => ({
+        // Initial state
+        professors: [],
+        acceptedProfessors: [],
+        currentProfessorIndex: 0,
+        loading: false,
+        error: null,
+
+        // Actions
+        fetchProfessors: async () => {
+          set({ loading: true, error: null }, false, 'fetchProfessors:start');
+
+          try {
+            const professors = await databaseService.getPendingProfessors();
+            set({
+              professors,
+              loading: false,
+              currentProfessorIndex: 0
+            }, false, 'fetchProfessors:success');
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to fetch professors';
+            set({
+              error: errorMessage,
+              loading: false
+            }, false, 'fetchProfessors:error');
+          }
+        },
+
+        fetchAcceptedProfessors: async (userId) => {
+          try {
+            const accepted = await databaseService.getAcceptedProfessors(userId);
+            set({ acceptedProfessors: accepted }, false, 'fetchAcceptedProfessors:success');
+          } catch (error) {
+            console.error('Failed to fetch accepted professors:', error);
+          }
+        },
+
+        acceptProfessor: async (userId, professor, interest) => {
+          try {
+            await databaseService.acceptProfessor(userId, professor.id, interest);
+
+            // Add to accepted list
+            set((state) => ({
+              acceptedProfessors: [
+                {
+                  id: professor.id,
+                  user_id: userId,
+                  professor_id: professor.id,
+                  interest,
+                  created_at: new Date().toISOString(),
+                  professors: professor,
+                },
+                ...state.acceptedProfessors,
+              ]
+            }), false, 'acceptProfessor:success');
+
+            // Move to next professor
+            get().nextProfessor();
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Failed to accept professor';
+            set({ error: errorMessage }, false, 'acceptProfessor:error');
+            throw error;
+          }
+        },
+
+        rejectProfessor: (professor) => {
+          // Just move to next professor
+          get().nextProfessor();
+        },
+
+        nextProfessor: () => {
+          set((state) => ({
+            currentProfessorIndex: state.currentProfessorIndex + 1
+          }), false, 'nextProfessor');
+        },
+
+        reset: () => {
+          set({
+            professors: [],
+            acceptedProfessors: [],
+            currentProfessorIndex: 0,
+            loading: false,
+            error: null,
+          }, false, 'reset');
+        },
+      }),
+      {
+        name: 'professor-storage',
+        // Persist accepted professors and current index
+        partialize: (state) => ({
+          acceptedProfessors: state.acceptedProfessors,
+          currentProfessorIndex: state.currentProfessorIndex,
+        }),
+      }
+    ),
+    { name: 'ProfessorStore' }
+  )
+);
+
+// Selectors
+export const selectCurrentProfessor = (state: ProfessorState) =>
+  state.professors[state.currentProfessorIndex];
+export const selectHasMoreProfessors = (state: ProfessorState) =>
+  state.currentProfessorIndex < state.professors.length;
+export const selectAcceptedCount = (state: ProfessorState) =>
+  state.acceptedProfessors.length;
 ```
 
 ### Migration Strategy
@@ -864,9 +1592,21 @@ For learning purposes, **try both**:
 
 ---
 
-## API Layer
+---
+
+## ⚙️ BACKEND IMPROVEMENTS
+
+> This section covers improvements for the Python/FastAPI backend.
+> The backend handles database operations, business logic, API endpoints, and data validation.
+
+---
+
+<a name="backend-api-service-layer"></a>
+## 8. Backend: API Service Layer
 
 ### Current Issues
+
+**Note:** While the API endpoints are implemented in the Python/FastAPI backend, the frontend needs a proper service layer to consume these APIs.
 
 1. **Hardcoded URLs** scattered in components:
    - `https://api.manit.codes/call-openai`
@@ -876,14 +1616,25 @@ For learning purposes, **try both**:
    - `app/dashboard/template/page.tsx`
    - `context/EmailGenerationProvider.tsx`
 
-3. **Inconsistent error handling**:
+3. **Mixed data sources**: Firebase (being removed) + External API (api.manit.codes) + Supabase (new)
+
+4. **Inconsistent error handling**:
    - Some use try/catch
    - Some use .catch()
    - Some ignore errors
 
-4. **No request/response types** - Using `any` or untyped JSON
+5. **No request/response types** - Using `any` or untyped JSON
 
-5. **No request cancellation** - Can cause memory leaks
+6. **No request cancellation** - Can cause memory leaks
+
+### New Architecture: Service Layer Pattern
+
+The service layer acts as a **proxy** between your components and external APIs/databases. This provides:
+- ✅ Single source of truth for all data operations
+- ✅ Type-safe request/response handling
+- ✅ Centralized error handling
+- ✅ Easy testing with mocks
+- ✅ Consistent patterns across the app
 
 ### Professional API Service Pattern
 
@@ -1139,7 +1890,458 @@ return () => controller.abort();
 
 ---
 
-## Component Organization
+<a name="frontend-custom-hooks"></a>
+## 4. Frontend: Custom Hooks & Patterns
+
+### Overview
+
+Custom hooks provide a clean interface between components and your stores/services. They encapsulate complex logic and make components simpler.
+
+**Benefits:**
+- ✅ Reusable logic across components
+- ✅ Separation of concerns
+- ✅ Easier testing
+- ✅ Better code organization
+- ✅ Cleaner component code
+
+### Hook Architecture
+
+```
+hooks/
+├── useAuth.ts              # Auth state and operations
+├── useEmailQueue.ts        # Email queue management
+├── useProfessors.ts        # Professor data fetching
+├── useSupabaseQuery.ts     # Generic Supabase query hook
+└── useSupabaseRealtime.ts  # Real-time subscriptions
+```
+
+### Implementation Examples
+
+#### 1. `hooks/useAuth.ts` - Simple Store Wrapper
+
+This hook wraps the Zustand auth store and provides a clean API for components.
+
+```typescript
+import { useAuthStore, selectUser, selectIsAuthenticated, selectIsLoading } from '@/stores/authStore';
+
+/**
+ * Hook for authentication state and operations
+ *
+ * @example
+ * ```tsx
+ * function MyComponent() {
+ *   const { user, isAuthenticated, signOut } = useAuth();
+ *
+ *   if (!isAuthenticated) return <Login />;
+ *
+ *   return <div>Welcome {user.email}</div>;
+ * }
+ * ```
+ */
+export function useAuth() {
+  const user = useAuthStore(selectUser);
+  const loading = useAuthStore(selectIsLoading);
+  const error = useAuthStore(state => state.error);
+  const signInWithGoogle = useAuthStore(state => state.signInWithGoogle);
+  const signOut = useAuthStore(state => state.signOut);
+
+  const isAuthenticated = !!user;
+
+  return {
+    user,
+    loading,
+    error,
+    isAuthenticated,
+    signInWithGoogle,
+    signOut,
+  };
+}
+
+/**
+ * Hook that throws if user is not authenticated
+ * Use this in protected components that require auth
+ */
+export function useRequireAuth() {
+  const auth = useAuth();
+
+  if (!auth.loading && !auth.isAuthenticated) {
+    throw new Error('User must be authenticated');
+  }
+
+  return auth;
+}
+
+/**
+ * Get user ID or throw error
+ */
+export function useUserId(): string {
+  const { user, loading } = useAuth();
+
+  if (loading) throw new Error('Auth still loading');
+  if (!user) throw new Error('User not authenticated');
+
+  return user.id;
+}
+```
+
+#### 2. `hooks/useEmailQueue.ts` - Queue Management
+
+```typescript
+import { useEmailQueueStore, selectQueue, selectIsGenerating, selectPendingCount } from '@/stores/emailQueueStore';
+import { useUserId } from './useAuth';
+
+/**
+ * Hook for email queue operations
+ */
+export function useEmailQueue() {
+  const queue = useEmailQueueStore(selectQueue);
+  const isGenerating = useEmailQueueStore(selectIsGenerating);
+  const pendingCount = useEmailQueueStore(selectPendingCount);
+  const addToQueue = useEmailQueueStore(state => state.addToQueue);
+  const removeFromQueue = useEmailQueueStore(state => state.removeFromQueue);
+  const clearQueue = useEmailQueueStore(state => state.clearQueue);
+  const processQueue = useEmailQueueStore(state => state.processQueue);
+
+  return {
+    queue,
+    isGenerating,
+    pendingCount,
+    addToQueue,
+    removeFromQueue,
+    clearQueue,
+    processQueue,
+  };
+}
+
+/**
+ * Hook for generating emails from queue
+ * Automatically uses current user ID
+ */
+export function useGenerateEmails() {
+  const userId = useUserId();
+  const { processQueue, isGenerating } = useEmailQueue();
+
+  const generateEmails = async (template: string, studentInfo: string) => {
+    return processQueue(userId, template, studentInfo);
+  };
+
+  return {
+    generateEmails,
+    isGenerating,
+  };
+}
+```
+
+#### 3. `hooks/useProfessors.ts` - Professor Data Management
+
+```typescript
+import { useEffect } from 'react';
+import { useProfessorStore, selectCurrentProfessor, selectHasMoreProfessors } from '@/stores/professorStore';
+import { useUserId } from './useAuth';
+
+/**
+ * Hook for managing professor data
+ * Automatically fetches professors on mount
+ */
+export function useProfessors() {
+  const userId = useUserId();
+  const professors = useProfessorStore(state => state.professors);
+  const acceptedProfessors = useProfessorStore(state => state.acceptedProfessors);
+  const currentProfessor = useProfessorStore(selectCurrentProfessor);
+  const hasMoreProfessors = useProfessorStore(selectHasMoreProfessors);
+  const loading = useProfessorStore(state => state.loading);
+  const error = useProfessorStore(state => state.error);
+
+  const fetchProfessors = useProfessorStore(state => state.fetchProfessors);
+  const fetchAcceptedProfessors = useProfessorStore(state => state.fetchAcceptedProfessors);
+  const acceptProfessor = useProfessorStore(state => state.acceptProfessor);
+  const rejectProfessor = useProfessorStore(state => state.rejectProfessor);
+
+  // Auto-fetch on mount
+  useEffect(() => {
+    fetchProfessors();
+    fetchAcceptedProfessors(userId);
+  }, [fetchProfessors, fetchAcceptedProfessors, userId]);
+
+  const handleAccept = async (interest: string) => {
+    if (!currentProfessor) return;
+    await acceptProfessor(userId, currentProfessor, interest);
+  };
+
+  const handleReject = () => {
+    if (!currentProfessor) return;
+    rejectProfessor(currentProfessor);
+  };
+
+  return {
+    professors,
+    acceptedProfessors,
+    currentProfessor,
+    hasMoreProfessors,
+    loading,
+    error,
+    handleAccept,
+    handleReject,
+    refetch: () => {
+      fetchProfessors();
+      fetchAcceptedProfessors(userId);
+    },
+  };
+}
+```
+
+#### 4. `hooks/useSupabaseQuery.ts` - Generic Supabase Hook
+
+```typescript
+import { useState, useEffect } from 'react';
+import { PostgrestFilterBuilder } from '@supabase/postgrest-js';
+
+type QueryBuilder<T> = () => PostgrestFilterBuilder<any, any, T[]>;
+
+interface UseSupabaseQueryOptions {
+  enabled?: boolean;
+  refetchInterval?: number;
+}
+
+/**
+ * Generic hook for Supabase queries
+ * Handles loading, error states, and refetching
+ *
+ * @example
+ * ```tsx
+ * const { data, loading, error, refetch } = useSupabaseQuery(
+ *   () => supabase.from('emails').select('*').eq('user_id', userId),
+ *   { enabled: !!userId }
+ * );
+ * ```
+ */
+export function useSupabaseQuery<T>(
+  queryBuilder: QueryBuilder<T>,
+  options: UseSupabaseQueryOptions = {}
+) {
+  const { enabled = true, refetchInterval } = options;
+
+  const [data, setData] = useState<T[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const fetchData = async () => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const query = queryBuilder();
+      const { data: result, error: queryError } = await query;
+
+      if (queryError) throw queryError;
+
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Query failed'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+
+    // Set up refetch interval if specified
+    if (refetchInterval && enabled) {
+      const interval = setInterval(fetchData, refetchInterval);
+      return () => clearInterval(interval);
+    }
+  }, [enabled, refetchInterval]);
+
+  return {
+    data,
+    loading,
+    error,
+    refetch: fetchData,
+  };
+}
+```
+
+#### 5. `hooks/useSupabaseRealtime.ts` - Real-time Subscriptions
+
+```typescript
+import { useEffect, useState } from 'react';
+import { supabase } from '@/config/supabase';
+import { RealtimeChannel } from '@supabase/supabase-js';
+
+interface UseRealtimeOptions {
+  table: string;
+  filter?: string;
+  event?: 'INSERT' | 'UPDATE' | 'DELETE' | '*';
+}
+
+/**
+ * Hook for Supabase real-time subscriptions
+ *
+ * @example
+ * ```tsx
+ * const { data, loading } = useSupabaseRealtime({
+ *   table: 'emails',
+ *   filter: `user_id=eq.${userId}`,
+ *   event: '*'
+ * });
+ * ```
+ */
+export function useSupabaseRealtime<T>(
+  options: UseRealtimeOptions,
+  fetchInitialData: () => Promise<T[]>
+) {
+  const { table, filter, event = '*' } = options;
+
+  const [data, setData] = useState<T[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    let channel: RealtimeChannel;
+
+    const setupSubscription = async () => {
+      try {
+        // Fetch initial data
+        const initialData = await fetchInitialData();
+        setData(initialData);
+        setLoading(false);
+
+        // Set up real-time subscription
+        channel = supabase
+          .channel(`${table}_changes`)
+          .on(
+            'postgres_changes',
+            {
+              event,
+              schema: 'public',
+              table,
+              filter,
+            },
+            async () => {
+              // Refetch data on any change
+              const newData = await fetchInitialData();
+              setData(newData);
+            }
+          )
+          .subscribe();
+
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Subscription failed'));
+        setLoading(false);
+      }
+    };
+
+    setupSubscription();
+
+    // Cleanup
+    return () => {
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
+  }, [table, filter, event]);
+
+  return {
+    data,
+    loading,
+    error,
+  };
+}
+
+/**
+ * Hook for email history with real-time updates
+ */
+export function useEmailHistoryRealtime(userId: string) {
+  const { data, loading, error } = useSupabaseRealtime(
+    {
+      table: 'emails',
+      filter: `user_id=eq.${userId}`,
+      event: '*',
+    },
+    async () => {
+      const { data, error } = await supabase
+        .from('emails')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    }
+  );
+
+  return { emails: data, loading, error };
+}
+```
+
+### Hook Usage in Components
+
+**Before (Direct store/service access):**
+```typescript
+function Dashboard() {
+  const user = useAuthStore(state => state.user);
+  const [emails, setEmails] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchEmails = async () => {
+      try {
+        const data = await databaseService.getEmailHistory(user.id);
+        setEmails(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEmails();
+  }, [user]);
+
+  if (loading) return <div>Loading...</div>;
+
+  return <div>{emails.length} emails</div>;
+}
+```
+
+**After (Custom hooks):**
+```typescript
+function Dashboard() {
+  const { user } = useAuth();
+  const { emails, loading, error } = useEmailHistoryRealtime(user?.id!);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+
+  return <div>{emails.length} emails</div>;
+}
+```
+
+### Hook Best Practices
+
+1. **Name hooks starting with `use`** - React convention
+2. **Keep hooks focused** - One responsibility per hook
+3. **Document with JSDoc** - Explain parameters and usage
+4. **Handle loading/error states** - Always provide these to components
+5. **Provide examples** - Show usage in JSDoc comments
+6. **Compose hooks** - Build complex hooks from simpler ones
+7. **Clean up subscriptions** - Return cleanup functions from useEffect
+8. **Type everything** - Full TypeScript support
+
+---
+
+<a name="frontend-component-organization"></a>
+## 5. Frontend: Component Organization
+
+**Overview:** Best practices for organizing React components in the frontend application.
 
 ### Current Issues
 
@@ -1238,29 +2440,26 @@ export function Header({ acceptedProfessors }: HeaderProps) {
 **For Complex Components:**
 ```typescript
 /**
- * Swipeable professor card component with drag gestures.
+ * Email generation component with form validation.
  *
- * Supports drag-to-accept (right) and drag-to-reject (left) interactions.
- * Uses Framer Motion for smooth animations and physics-based gestures.
+ * Handles user input for email generation with proper validation.
+ * Uses React Hook Form for form management.
  *
- * @param professor - Professor data to display
- * @param onAccept - Called when user swipes right (>100px)
- * @param onReject - Called when user swipes left (<-100px)
+ * @param template - Email template to use
+ * @param onGenerate - Called when user submits the form
  *
  * @example
  * ```tsx
- * <ProfessorCard
- *   professor={prof}
- *   onAccept={(p) => saveProfessor(p)}
- *   onReject={(p) => skipProfessor(p)}
+ * <EmailForm
+ *   template={template}
+ *   onGenerate={(data) => generateEmail(data)}
  * />
  * ```
  */
-export function ProfessorCard({
-  professor,
-  onAccept,
-  onReject,
-}: ProfessorCardProps) {
+export function EmailForm({
+  template,
+  onGenerate,
+}: EmailFormProps) {
   // ...
 }
 ```
@@ -1281,8 +2480,8 @@ interface ProfessorCardProps {
 }
 
 // 3. Constants
-const SWIPE_THRESHOLD = 100;
-const ANIMATION_DURATION = 0.3;
+const MAX_EMAIL_LENGTH = 1000;
+const VALIDATION_DELAY = 300;
 
 // 4. Component
 export function ProfessorCard({
@@ -1376,7 +2575,10 @@ components/
 
 ---
 
-## Error Handling
+<a name="frontend-error-handling"></a>
+## 6. Frontend: Error Handling
+
+**Overview:** Client-side error handling including Error Boundaries, loading states, and user feedback.
 
 ### Current Issues
 
@@ -1585,7 +2787,8 @@ toast.promise(
 
 ---
 
-## Code Quality Issues
+<a name="frontend-code-quality"></a>
+## 7. Frontend: Code Quality Issues
 
 ### 1. Hardcoded Values
 
@@ -1613,13 +2816,6 @@ export const BREAKPOINTS = {
   wide: 1280,
 } as const;
 
-// Swipe thresholds
-export const SWIPE = {
-  threshold: 100,
-  rotationMax: 25,
-  animationDuration: 0.3,
-} as const;
-
 // Email generation
 export const EMAIL = {
   maxQueueSize: 10,
@@ -1632,7 +2828,6 @@ export const ROUTES = {
   home: '/',
   dashboard: '/dashboard',
   generate: '/dashboard/generate',
-  swipe: '/dashboard/swipe',
   template: '/dashboard/template',
   mentorship: '/mentorship',
 } as const;
@@ -1640,11 +2835,11 @@ export const ROUTES = {
 
 **Usage:**
 ```typescript
-import { BREAKPOINTS, SWIPE } from '@/lib/constants';
+import { BREAKPOINTS, EMAIL } from '@/lib/constants';
 
 const isMobile = window.innerWidth < BREAKPOINTS.tablet;
 
-if (offset.x > SWIPE.threshold) handleAccept();
+if (queue.length >= EMAIL.maxQueueSize) handleQueueFull();
 ```
 
 ### 2. Duplicate Code
@@ -1934,7 +3129,8 @@ useEffect(() => {
 
 ---
 
-## Learning Resources
+<a name="learning-resources"></a>
+## 15. Learning Resources
 
 ### TypeScript
 
@@ -2026,58 +3222,206 @@ useEffect(() => {
 
 ---
 
-## Prioritized Action Plan
+<a name="prioritized-action-plan"></a>
+## 16. Prioritized Action Plan
 
-### Phase 1: Critical Fixes (Do First)
+**Overview:** Step-by-step plan for implementing improvements across frontend and backend.
+
+### Phase 0: Supabase Setup (Do First)
+
+**Priority: 🔴 CRITICAL - Prerequisites**
+
+- [ ] **Create Supabase project**
+  - Sign up at supabase.com
+  - Create new project
+  - Copy project URL and anon key
+
+- [ ] **Set up database schema**
+  - Run SQL from migration section to create tables
+  - Set up Row Level Security (RLS) policies
+  - Create indexes for performance
+
+- [ ] **Configure authentication**
+  - Enable Google OAuth in Supabase dashboard
+  - Add authorized redirect URLs
+  - Test auth flow in Supabase dashboard
+
+- [ ] **Environment setup**
+  - Create `.env.local` with Supabase credentials
+  - Create `.env.example` for repository
+  - Update `.gitignore` to exclude `.env.local`
+
+- [ ] **Generate TypeScript types**
+  - Install Supabase CLI: `npm install -D supabase`
+  - Run type generation command
+  - Create `types/supabase.ts`
+
+**Time Estimate:** 1-2 hours
+
+### Phase 1: Fix Broken State & Type Safety
 
 **Priority: 🔴 CRITICAL**
 
-- [ ] **Security: Move Firebase config to environment variables**
-  - Create `.env.local`
-  - Update `config/firebase.ts`
-  - Add `.env.example`
-  - Update `.gitignore`
+- [ ] **Fix broken Firebase imports**
+  - Update `config/supabase.ts` with environment variables
+  - Remove or comment out Firebase references temporarily
+  - Ensure app can run without errors
 
-- [ ] **Type Safety: Fix `any` types in AuthContext**
-  - Create `types/user.ts`
-  - Update `context/AuthContextProvider.tsx`
-  - Add proper type guards
-
-- [ ] **Type Safety: Create centralized type definitions**
+- [ ] **Create centralized type definitions**
+  - Create `types/user.ts` (Supabase user types)
   - Create `types/professor.ts`
   - Create `types/email.ts`
-  - Create `types/api.ts`
+  - Create `types/api.ts` (for external API)
+  - Create `types/stores.ts` (Zustand store types)
   - Create `types/index.ts` for re-exports
+
+- [ ] **Fix `any` types**
+  - Remove `any` from AuthContext (or prepare to delete)
+  - Add proper TypeScript throughout
+  - Enable strict mode in tsconfig.json
 
 **Time Estimate:** 2-3 hours
 
-### Phase 2: Code Organization (Do Second)
+### Phase 2: Service Layer Implementation
+
+**Priority: 🔴 CRITICAL**
+
+- [ ] **Create Supabase service layer**
+  - Create `services/supabase/auth.service.ts`
+  - Create `services/supabase/database.service.ts`
+  - Create `services/supabase/realtime.service.ts`
+  - Test each service independently
+
+- [ ] **Create external API service layer**
+  - Create `services/api/client.ts` (base API client)
+  - Create `services/api/email.service.ts` (email generation)
+  - Add proper error handling and types
+  - Test API calls
+
+- [ ] **Create service index**
+  - Create `services/index.ts`
+  - Export all services for easy imports
+
+**Time Estimate:** 3-4 hours
+
+### Phase 3: Zustand State Management
 
 **Priority: 🟡 HIGH**
 
-- [ ] **Create API service layer**
-  - Create `services/api/client.ts`
-  - Create `services/api/email.service.ts`
-  - Create `services/api/professor.service.ts`
-  - Update components to use services
+- [ ] **Install Zustand**
+  - Run `npm install zustand`
+  - Read Zustand documentation basics
+
+- [ ] **Create auth store**
+  - Create `stores/authStore.ts`
+  - Implement with Supabase auth service
+  - Add persist middleware
+  - Add devtools middleware
+  - Test auth flow
+
+- [ ] **Create email queue store**
+  - Create `stores/emailQueueStore.ts`
+  - Migrate logic from EmailGenerationProvider
+  - Add processQueue functionality
+  - Add persist middleware
+  - Test queue operations
+
+- [ ] **Create professor store**
+  - Create `stores/professorStore.ts`
+  - Implement fetching and accepting professors
+  - Add persist middleware for accepted professors
+  - Test professor functionality
+
+- [ ] **Create stores index**
+  - Create `stores/index.ts`
+  - Export all stores
+
+**Time Estimate:** 4-5 hours
+
+### Phase 4: Custom Hooks Implementation
+
+**Priority: 🟡 HIGH**
+
+- [ ] **Create auth hooks**
+  - Create `hooks/useAuth.ts`
+  - Create `useRequireAuth` and `useUserId` helpers
+  - Test in components
+
+- [ ] **Create email queue hooks**
+  - Create `hooks/useEmailQueue.ts`
+  - Create `useGenerateEmails` helper
+  - Test queue operations
+
+- [ ] **Create professor hooks**
+  - Create `hooks/useProfessors.ts`
+  - Add auto-fetch on mount
+  - Test in generate page
+
+- [ ] **Create generic Supabase hooks**
+  - Create `hooks/useSupabaseQuery.ts`
+  - Create `hooks/useSupabaseRealtime.ts`
+  - Create `useEmailHistoryRealtime` helper
+  - Test real-time updates
+
+**Time Estimate:** 3-4 hours
+
+### Phase 5: Migrate Components to New Architecture
+
+**Priority: 🟡 HIGH**
+
+- [ ] **Update auth flow**
+  - Update `app/page.tsx` to use auth store
+  - Update `app/layout.tsx` to initialize auth
+  - Replace AuthContextProvider with store initialization
+  - Test login/logout flow
+
+- [ ] **Update dashboard**
+  - Update `app/dashboard/page.tsx` to use hooks
+  - Use `useEmailHistoryRealtime` for email history
+  - Replace Firestore queries with Supabase
+  - Test real-time updates
+
+- [ ] **Update generate page**
+  - Update `app/dashboard/generate/page.tsx`
+  - Use `useGenerateEmails` hook
+  - Test email generation
+  - Verify Supabase storage
+
+- [ ] **Update template page**
+  - Update `app/dashboard/template/page.tsx`
+  - Use email service for template generation
+  - Test OpenAI integration
+
+**Time Estimate:** 5-6 hours
+
+### Phase 6: Clean Up & Delete Old Code
+
+**Priority: 🟢 MEDIUM**
+
+- [ ] **Remove Context providers**
+  - Delete `context/AuthContextProvider.tsx`
+  - Delete `context/EmailGenerationProvider.tsx`
+  - Delete `context/index.ts`
+  - Remove provider wrappers from layout
+
+- [ ] **Remove Firebase completely**
+  - Delete all Firebase imports
+  - Remove Firebase from package.json
+  - Run `npm uninstall firebase firebase-admin`
+  - Verify no Firebase references remain
 
 - [ ] **Reorganize components**
   - Create `components/features/` directory
   - Create `components/layout/` directory
   - Create `components/shared/` directory
   - Move components to appropriate folders
+  - Update all imports
 
-- [ ] **Create utility functions**
-  - Create `lib/constants.ts`
-  - Create `lib/validation.ts`
-  - Create `lib/errors.ts`
-  - Create `lib/storage.ts`
+**Time Estimate:** 2-3 hours
 
-**Time Estimate:** 4-5 hours
+### Phase 7: Error Handling & UX
 
-### Phase 3: Error Handling & UX (Do Third)
-
-**Priority: 🟡 HIGH**
+**Priority: 🟢 MEDIUM**
 
 - [ ] **Add error boundaries**
   - Create `components/shared/ErrorBoundary.tsx`
@@ -2089,102 +3433,206 @@ useEffect(() => {
   - Create `app/loading.tsx`
   - Create `app/dashboard/loading.tsx`
   - Create loading spinner component
+  - Add skeleton screens
 
 - [ ] **Add 404 page**
   - Create `app/not-found.tsx`
 
 - [ ] **Improve error messages**
+  - Install sonner: `npm install sonner`
   - Replace alerts with toast notifications
   - Use error utility functions
   - Show user-friendly messages
 
 **Time Estimate:** 2-3 hours
 
-### Phase 4: State Management (Optional - Educational)
+### Phase 8: Code Quality Improvements
 
 **Priority: 🟢 MEDIUM**
 
-- [ ] **Learn Zustand basics**
-  - Read documentation
-  - Try simple example
-
-- [ ] **Convert email queue to Zustand**
-  - Install zustand
-  - Create `stores/emailQueueStore.ts`
-  - Update components
-  - Test persistence
-
-- [ ] **Consider auth store conversion**
-  - Create `stores/authStore.ts`
-  - Compare with Context approach
-  - Decide which to keep
-
-**Time Estimate:** 3-4 hours
-
-### Phase 5: Code Quality (Do When Time Permits)
-
-**Priority: 🟢 MEDIUM**
+- [ ] **Create utility functions**
+  - Create `lib/constants.ts`
+  - Create `lib/validation.ts`
+  - Create `lib/errors.ts`
+  - Update components to use utilities
 
 - [ ] **Standardize exports**
   - Convert all to named exports
-  - Update imports
+  - Update imports throughout
 
 - [ ] **Add JSDoc comments**
   - Document complex components
-  - Document utility functions
+  - Document all utility functions
+  - Document all hooks
 
 - [ ] **Clean up unused files**
   - Remove unused SVGs from public/
   - Organize public directory
-
-- [ ] **Add request cancellation**
-  - Update fetch calls with AbortController
-  - Clean up in useEffect
+  - Remove deleted hooks from git
 
 **Time Estimate:** 2-3 hours
 
-### Phase 6: Testing (Future)
+### Phase 9: Testing (Future)
 
 **Priority: 🔵 LOW**
 
 - [ ] **Set up testing infrastructure**
-  - Install Vitest
-  - Install Testing Library
-  - Configure
+  - Install Vitest: `npm install -D vitest`
+  - Install Testing Library: `npm install -D @testing-library/react`
+  - Configure vitest.config.ts
 
 - [ ] **Write unit tests**
+  - Test Zustand stores
   - Test custom hooks
   - Test utility functions
-  - Test services
+  - Test services with mocks
 
 - [ ] **Write integration tests**
-  - Test user flows
-  - Test API calls
+  - Test auth flow
+  - Test email generation flow
+  - Test professor selection flow
 
 **Time Estimate:** 5-10 hours
 
 ---
 
+## Migration Checklist Summary
+
+**Before you start:**
+- [ ] Create Supabase project and database
+- [ ] Set up environment variables
+- [ ] Backup current Firebase data (if needed)
+
+**Core migration (Phases 1-5):**
+- [ ] Fix broken imports and type safety
+- [ ] Create service layer (Supabase + API)
+- [ ] Implement Zustand stores
+- [ ] Create custom hooks
+- [ ] Migrate all components to new architecture
+
+**After migration:**
+- [ ] Delete Context providers and Firebase code
+- [ ] Add error handling and loading states
+- [ ] Improve code quality
+- [ ] Add testing
+
+**Total Estimated Time:** 20-30 hours for complete migration
+
+---
+
 ## Summary
 
-Your codebase demonstrates solid fundamentals and modern React patterns. The main areas for improvement are:
+Your codebase has a solid foundation with modern technologies (Next.js 15, React 19, TypeScript). This document now provides a complete roadmap for migrating to a professional architecture with:
 
-1. **Security** - Environment variables for secrets
-2. **Type Safety** - Eliminate `any` types, centralize definitions
-3. **Organization** - Feature-based structure, service layer
-4. **Error Handling** - Boundaries, loading states, user-friendly messages
-5. **Code Quality** - DRY, constants, validation
+### Key Changes Documented
 
-**Next Steps:**
-1. Start with Phase 1 (critical fixes)
-2. Practice TypeScript and React patterns
-3. Consider Zustand for state management education
-4. Add testing when comfortable with architecture
+1. **Supabase Migration** - Complete migration from Firebase to Supabase
+   - PostgreSQL database with Row Level Security
+   - Type-safe database queries
+   - Real-time subscriptions
+   - Modern authentication
 
-**Remember:**
-- Don't refactor everything at once
-- Make incremental improvements
-- Test after each change
-- Learn by doing
+2. **Zustand State Management** - Replace React Context with Zustand
+   - Better performance and TypeScript support
+   - Built-in persistence and DevTools
+   - Cleaner API and selective re-renders
 
-Good luck with your frontend engineering journey! 🚀
+3. **API Proxy Layer** - Service layer for all data operations
+   - Centralized error handling
+   - Type-safe request/response
+   - Easy testing and mocking
+   - Consistent patterns
+
+4. **Custom Hooks** - Clean interface between components and stores
+   - Reusable logic
+   - Cleaner components
+   - Better separation of concerns
+
+5. **New File Structure** - Professional organization
+   - `stores/` - Zustand state stores
+   - `services/` - API and database operations
+   - `hooks/` - Custom React hooks
+   - `types/` - Centralized TypeScript definitions
+
+### Main Areas for Improvement
+
+1. **🔴 CRITICAL: Fix Broken State**
+   - Firebase imports broken (files deleted)
+   - App won't run until fixed
+   - Need immediate Supabase setup or Firebase restoration
+
+2. **🔴 CRITICAL: Type Safety**
+   - Eliminate `any` types
+   - Centralize type definitions
+   - Use auto-generated Supabase types
+
+3. **🟡 HIGH: Architecture Upgrade**
+   - Service layer for data operations
+   - Zustand for state management
+   - Custom hooks for clean component code
+
+4. **🟢 MEDIUM: Code Quality**
+   - Error boundaries and loading states
+   - Constants and validation utilities
+   - JSDoc documentation
+
+### Migration Strategy
+
+**Recommended Approach:**
+1. **Phase 0-1** (4-5 hours): Set up Supabase and fix broken state
+2. **Phase 2-4** (10-13 hours): Build new architecture (services, stores, hooks)
+3. **Phase 5-6** (7-9 hours): Migrate components and delete old code
+4. **Phase 7-8** (4-6 hours): Polish with error handling and code quality
+5. **Phase 9** (Optional): Add comprehensive testing
+
+**Total Time:** 20-30 hours for complete migration
+
+### Why This Architecture?
+
+**Benefits:**
+- ✅ **Type Safety**: TypeScript throughout with auto-generated DB types
+- ✅ **Scalability**: Clean separation of concerns
+- ✅ **Maintainability**: Easy to find and update code
+- ✅ **Performance**: Optimized re-renders with Zustand selectors
+- ✅ **Developer Experience**: DevTools, better debugging
+- ✅ **Testability**: Services and hooks easy to test in isolation
+- ✅ **Modern Best Practices**: Industry-standard patterns
+
+### Learning Outcomes
+
+By completing this migration, you'll gain hands-on experience with:
+- PostgreSQL and Supabase
+- Advanced state management with Zustand
+- Service layer architecture
+- Custom React hooks
+- TypeScript best practices
+- Real-time subscriptions
+- Professional code organization
+
+### Next Steps
+
+1. **Immediate** (Today):
+   - Create Supabase project
+   - Set up database schema
+   - Fix broken Firebase imports
+
+2. **This Week**:
+   - Complete service layer
+   - Implement Zustand stores
+   - Create custom hooks
+
+3. **This Month**:
+   - Migrate all components
+   - Delete old code
+   - Add error handling
+   - Polish and test
+
+### Remember
+
+- **Don't rush** - Take time to understand each concept
+- **Test frequently** - Verify each change works before moving on
+- **Learn by doing** - This is hands-on practice with modern patterns
+- **Ask for help** - The architecture is well-documented with examples
+- **Iterate** - You don't have to do everything perfectly the first time
+
+**This migration will transform your codebase from a working MVP to a professional, scalable application. Good luck with your frontend engineering journey! 🚀**
