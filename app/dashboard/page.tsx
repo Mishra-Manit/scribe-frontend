@@ -6,11 +6,10 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import MobileRestriction from "@/components/MobileRestriction";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { db } from "../../config/firebase";
-import { collection, onSnapshot, Timestamp } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { useEmailGeneration } from "@/context/EmailGenerationProvider";
+import { api } from "@/lib/api";
 
 interface EmailHistory {
   id: string;
@@ -18,7 +17,7 @@ interface EmailHistory {
   professor_interest: string;
   email_message: string;
   source: string;
-  created_at: Timestamp;
+  created_at: string; // ISO date string from backend
   status: string;
 }
 
@@ -30,49 +29,38 @@ export default function DashboardPage() {
   const [hoveredEmailId, setHoveredEmailId] = useState<string | null>(null);
   const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
 
-  // Fetch user's email history and derive count from it
+  // Fetch user's email history from backend API
   useEffect(() => {
-    const fetchEmailHistory = () => {
+    const fetchEmailHistory = async () => {
       if (user?.uid) {
         try {
-          // Reference to user's emails subcollection
-          const emailsRef = collection(db, "users", user.uid, "emails");
-          
-          const unsubscribe = onSnapshot(emailsRef, (querySnapshot) => {
-            const emails: EmailHistory[] = [];
-            querySnapshot.forEach((doc) => {
-              emails.push({
-                id: doc.id,
-                ...doc.data()
-              } as EmailHistory);
-            });
-            
-            // Sort by created_at timestamp
-            emails.sort((a, b) => {
-              if (a.created_at && b.created_at) {
-                return b.created_at.toMillis() - a.created_at.toMillis();
-              }
-              return 0;
-            });
-            
-            setEmailHistory(emails);
-            // Set email count based on actual number of emails
-            setEmailCount(emails.length);
+          const data = await api.email.getEmailHistory();
+
+          // Assuming backend returns { emails: EmailHistory[] }
+          const emails: EmailHistory[] = data.emails || data;
+
+          // Sort by created_at timestamp (assuming ISO date strings)
+          emails.sort((a, b) => {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
           });
 
-          return unsubscribe;
+          setEmailHistory(emails);
+          setEmailCount(emails.length);
         } catch (error: unknown) {
           console.error("Error fetching email history:", error);
+          setEmailHistory([]);
+          setEmailCount(0);
         }
       }
     };
 
-    const unsubscribe = fetchEmailHistory();
+    fetchEmailHistory();
+
+    // Optional: Set up polling for updates every 5 seconds
+    const pollInterval = setInterval(fetchEmailHistory, 5000);
 
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      clearInterval(pollInterval);
     };
   }, [user]);
 

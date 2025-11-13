@@ -1,8 +1,6 @@
 "use client"
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { db, auth } from "../config/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { supabase } from "../config/supabase";
 
 const AuthContext = createContext<any>({})
 
@@ -13,26 +11,41 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUser({
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName,
-        })
+    // Listen for auth state changes - Supabase manages session internally
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.access_token) {
+        try {
+          // Verify JWT locally using getClaims() - no server API call
+          const { data: claims, error: claimsError } = await supabase.auth.getClaims();
+          
+          if (claimsError || !claims) {
+            // Token invalid or expired
+            setUser(null);
+          } else if (session?.user) {
+            // Token verified locally, set user
+            setUser({
+              uid: session.user.id,
+              email: session.user.email,
+              displayName: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+              claims: claims, // Verified claims from local verification
+            })
+          }
+        } catch (error) {
+          console.error('JWT verification error:', error);
+          setUser(null);
+        }
       } else {
         setUser(null);
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
-
 
   const logout = async () => {
     setUser(null);
-    await signOut(auth);
+    await supabase.auth.signOut();
   };
 
   return (

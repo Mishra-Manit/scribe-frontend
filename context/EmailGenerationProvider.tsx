@@ -8,8 +8,7 @@ export interface GenerationQueueItem {
   id: string;
   name: string;
   interest: string;
-  // DEPRECATED: 'swipe' source is no longer used as the swipe feature has been discontinued
-  source: 'swipe' | 'generate';
+  source: 'generate';
 }
 
 interface EmailGenerationContextType {

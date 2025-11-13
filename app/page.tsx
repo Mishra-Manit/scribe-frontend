@@ -1,39 +1,34 @@
 "use client";
 import { useRouter } from "next/navigation"
 import React from "react"
-import { db } from "../config/firebase"
-import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth"
-import { doc, setDoc, getDoc } from "firebase/firestore"
+import { supabase } from "../config/supabase"
 import { useAuth } from "../context/AuthContextProvider"
 
 export default function LandingPage() {
-  const provider = new GoogleAuthProvider();
-  const auth = getAuth();
   const router = useRouter();
+  const { user } = useAuth();
 
-  useAuth(); // Call useAuth if it has side effects, otherwise this line can be removed if not needed.
+  // Redirect if already logged in
+  React.useEffect(() => {
+    if (user) {
+      router.replace("/dashboard");
+    }
+  }, [user, router]);
 
   const loginWithGoogle = async () => {
     try {
-      await signInWithPopup(auth, provider);
-      const user = auth.currentUser;
-      console.log(user);
-      
-      if(user){
-        const userDocRef = doc(db, "users", user.uid);
-        const userDocSnapshot = await getDoc(userDocRef);
-        if (!userDocSnapshot.exists()) {
-          await setDoc(userDocRef, {
-            userId: user.uid,
-            email: user.email,
-            name: user.displayName,
-            emailCount: 0,
-          });
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
         }
+      });
+
+      if (error) {
+        console.error("Error signing in with Google: ", error);
       }
-
-      router.replace("/dashboard");
-
+      // Note: After successful OAuth, user will be redirected by Supabase
+      // Your backend should handle user creation on first login via webhook or API call
     } catch (error) {
       console.error("Error signing in with Google: ", error);
     }
