@@ -27,8 +27,7 @@ export default function LandingPage() {
       if (error) {
         console.error("Error signing in with Google: ", error);
       }
-      // Note: After successful OAuth, user will be redirected by Supabase
-      // Your backend should handle user creation on first login via webhook or API call
+      // Note: After successful OAuth, AuthContextProvider will handle user initialization
     } catch (error) {
       console.error("Error signing in with Google: ", error);
     }

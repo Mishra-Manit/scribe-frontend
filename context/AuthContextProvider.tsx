@@ -1,6 +1,7 @@
 "use client"
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../config/supabase";
+import { api } from "../lib/api";
 
 interface User {
   uid: string;
@@ -31,16 +32,28 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     // Listen for auth state changes - Supabase manages session internally
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.access_token) {
         try {
           // Verify JWT locally using getClaims() - no server API call
           const { data: claims, error: claimsError } = await supabase.auth.getClaims();
-          
+
           if (claimsError || !claims) {
             // Token invalid or expired
             setUser(null);
           } else if (session?.user) {
+            // Initialize user in backend database on sign in
+            if (event === 'SIGNED_IN') {
+              try {
+                console.log('🔄 Initializing user in backend database...');
+                await api.user.initUser();
+                console.log('✅ User initialized in backend database');
+              } catch (error) {
+                console.error('⚠️  User initialization failed (might already exist):', error);
+                // Continue anyway - endpoint is idempotent
+              }
+            }
+
             // Token verified locally, set user
             setUser({
               uid: session.user.id,

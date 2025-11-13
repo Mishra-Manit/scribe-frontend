@@ -71,15 +71,14 @@ export const userAPI = {
   },
 
   /**
-   * Create or update user profile (called on first login)
+   * Initialize user profile in backend database (called on first login)
+   * The backend reads user email from JWT token automatically
    */
-  createOrUpdateUser: async (userData: {
-    email: string;
-    displayName?: string;
-  }) => {
-    const response = await authenticatedFetch("/api/user", {
+  initUser: async (displayName?: string) => {
+    const body = displayName ? JSON.stringify({ display_name: displayName }) : undefined;
+    const response = await authenticatedFetch("/api/user/init", {
       method: "POST",
-      body: JSON.stringify(userData),
+      body,
     });
     return response.json();
   },
