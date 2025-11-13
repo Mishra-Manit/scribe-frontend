@@ -2,12 +2,31 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "../config/supabase";
 
-const AuthContext = createContext<any>({})
+interface User {
+  uid: string;
+  email: string | undefined;
+  displayName: string;
+  claims: Record<string, unknown>;
+}
 
-export const useAuth = () => useContext(AuthContext)
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  logout: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthContextProvider');
+  }
+  return context;
+}
 
 export const AuthContextProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {

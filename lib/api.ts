@@ -7,6 +7,17 @@ import { supabase } from "../config/supabase";
 import { API_BASE_URL } from "../config/api";
 
 /**
+ * Email generation request data type
+ */
+export interface EmailGenerationData {
+  email_template: string;
+  name: string;
+  professor_interest: string;
+  userId: string;
+  source: string;
+}
+
+/**
  * Get the current user's JWT token from Supabase
  * This token should be included in all authenticated API requests
  */
@@ -89,7 +100,7 @@ export const emailAPI = {
   /**
    * Generate a new email
    */
-  generateEmail: async (emailData: any) => {
+  generateEmail: async (emailData: EmailGenerationData) => {
     const response = await authenticatedFetch("/api/generate-email", {
       method: "POST",
       body: JSON.stringify(emailData),

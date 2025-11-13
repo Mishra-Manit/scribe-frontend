@@ -19,7 +19,7 @@ export default function MentorshipPage() {
           <CardContent>
             <div className="text-center">
               <p className="text-lg text-gray-700 mb-4">
-                Unlock your research potential with personalized mentorship from experienced scientists and researchers. Whether you're a high school or college student, our mentorship program is designed to guide you through the process of conducting impactful science research, from idea to publication.
+                Unlock your research potential with personalized mentorship from experienced scientists and researchers. Whether you&apos;re a high school or college student, our mentorship program is designed to guide you through the process of conducting impactful science research, from idea to publication.
               </p>
               <ul className="text-left text-gray-600 mb-6 mx-auto max-w-md list-disc list-inside">
                 <li>1-on-1 mentorship with published researchers</li>
