@@ -9,37 +9,49 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { useEmailGeneration } from "@/context/EmailGenerationProvider";
-import { api } from "@/lib/api";
-
-interface EmailHistory {
-  id: string;
-  professor_name: string;
-  professor_interest: string;
-  email_message: string;
-  source: string;
-  created_at: string; // ISO date string from backend
-  status: string;
-}
+import { api, EmailResponse } from "@/lib/api";
+import { supabase } from "@/config/supabase";
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { emailQueue } = useEmailGeneration();
+  const { emailQueue, currentTaskStatus } = useEmailGeneration();
   const [emailCount, setEmailCount] = useState(0);
-  const [emailHistory, setEmailHistory] = useState<EmailHistory[]>([]);
+  const [emailHistory, setEmailHistory] = useState<EmailResponse[]>([]);
   const [hoveredEmailId, setHoveredEmailId] = useState<string | null>(null);
   const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
+
+  // Temporary helper: surface the Supabase JWT once user is authenticated.
+  useEffect(() => {
+    if (!user) return;
+
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Failed to retrieve Supabase session", error);
+          return;
+        }
+
+        const token = data.session?.access_token;
+        if (token) {
+          console.log("Supabase JWT:", token);
+        } else {
+          console.warn("No active Supabase session found to extract a JWT.");
+        }
+      })
+      .catch((err) => {
+        console.error("Unexpected error while fetching Supabase session", err);
+      });
+  }, [user]);
 
   // Fetch user's email history from backend API
   useEffect(() => {
     const fetchEmailHistory = async () => {
       if (user?.uid) {
         try {
-          const data = await api.email.getEmailHistory();
+          const emails = await api.email.getEmailHistory(20, 0);
 
-          // Assuming backend returns { emails: EmailHistory[] }
-          const emails: EmailHistory[] = data.emails || data;
-
-          // Sort by created_at timestamp (assuming ISO date strings)
+          // Sort by created_at timestamp (newest first)
           emails.sort((a, b) => {
             return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
           });
@@ -56,7 +68,7 @@ export default function DashboardPage() {
 
     fetchEmailHistory();
 
-    // Optional: Set up polling for updates every 5 seconds
+    // Set up polling for updates every 5 seconds
     const pollInterval = setInterval(fetchEmailHistory, 5000);
 
     return () => {
@@ -165,6 +177,11 @@ export default function DashboardPage() {
                         <p className="text-xs text-muted-foreground">
                           {emailQueue.length} emails in queue
                         </p>
+                        {currentTaskStatus?.result?.current_step && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            Step: {currentTaskStatus.result.current_step.replace(/_/g, ' ')}
+                          </p>
+                        )}
                       </>
                     ) : (
                       <>
@@ -189,13 +206,13 @@ export default function DashboardPage() {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Professor Name
+                            Recipient Name
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Interest/Field
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Source
+                            Template Type
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Email Content
@@ -205,21 +222,21 @@ export default function DashboardPage() {
                       <tbody className="bg-white divide-y divide-gray-200">
                         {emailHistory.length > 0 ? (
                           emailHistory.map((email) => (
-                            <tr 
-                              key={email.id} 
+                            <tr
+                              key={email.id}
                               className="hover:bg-gray-50"
                               onMouseEnter={() => setHoveredEmailId(email.id)}
                               onMouseLeave={() => setHoveredEmailId(null)}
                             >
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 align-top">
-                                {email.professor_name}
+                                {email.recipient_name}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 align-top">
-                                {email.professor_interest}
+                                {email.recipient_interest}
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 align-top">
-                                <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">
-                                  {email.source}
+                                <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 capitalize">
+                                  {email.template_type}
                                 </span>
                               </td>
                               <td className="px-6 py-4 text-sm text-gray-500 relative">

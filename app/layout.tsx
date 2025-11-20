@@ -2,6 +2,7 @@ import type React from "react"
 import "./globals.css"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
+import { QueryProvider } from "@/providers/QueryProvider"
 import { AuthContextProvider } from "../context/AuthContextProvider"
 import { EmailGenerationProvider } from "@/context/EmailGenerationProvider";
 
@@ -20,11 +21,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <AuthContextProvider>
-          <EmailGenerationProvider>
-            {children}
-          </EmailGenerationProvider>
-        </AuthContextProvider>
+        <QueryProvider>
+          <AuthContextProvider>
+            <EmailGenerationProvider>
+              {children}
+            </EmailGenerationProvider>
+          </AuthContextProvider>
+        </QueryProvider>
       </body>
     </html>
   )

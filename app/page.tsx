@@ -15,6 +15,30 @@ export default function LandingPage() {
     }
   }, [user, router]);
 
+  // Temporary helper: log the user's access token for backend testing.
+  React.useEffect(() => {
+    if (!user) return;
+
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Failed to retrieve Supabase session", error);
+          return;
+        }
+
+        const token = data.session?.access_token;
+        if (token) {
+          console.log("Supabase JWT:", token);
+        } else {
+          console.warn("No active Supabase session found to extract a JWT.");
+        }
+      })
+      .catch((err) => {
+        console.error("Unexpected error while fetching Supabase session", err);
+      });
+  }, [user]);
+
   const loginWithGoogle = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({

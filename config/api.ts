@@ -20,9 +20,18 @@ export const API_BASE_URL = getApiBaseUrl();
 
 /**
  * API Endpoints
+ *
+ * @deprecated These legacy endpoints are no longer used.
+ * All new code should use the api object from @/lib/api.ts instead.
+ *
+ * Legacy endpoints (kept for reference during migration):
+ * - /generate-email → Use api.email.generateEmail() (now async with task polling)
+ * - /call-openai → Template generation (functionality moved to backend pipeline)
  */
 export const API_ENDPOINTS = {
+  /** @deprecated Use api.email.generateEmail() from @/lib/api.ts */
   generateEmail: `${API_BASE_URL}/generate-email`,
+  /** @deprecated Template generation moved to backend pipeline */
   callOpenAI: `${API_BASE_URL}/call-openai`,
 } as const;
 

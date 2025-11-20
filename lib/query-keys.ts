@@ -1,0 +1,105 @@
+/**
+ * Query Key Factory
+ * Centralized, hierarchical query keys for React Query cache management
+ *
+ * Benefits:
+ * - Type-safe query key generation
+ * - Easy cache invalidation (invalidate all emails with queryKeys.emails._def)
+ * - Consistent key structure across the app
+ * - Prevents typos and key conflicts
+ */
+
+/**
+ * Query key factory for user-related queries
+ */
+export const queryKeys = {
+  // User domain keys
+  user: {
+    // Base key for all user queries
+    all: ['user'] as const,
+
+    // Current authenticated user profile
+    profile: () => [...queryKeys.user.all, 'profile'] as const,
+
+    // User by ID (for future use)
+    byId: (userId: string) => [...queryKeys.user.all, userId] as const,
+  },
+
+  // Email domain keys
+  emails: {
+    // Base key for all email queries
+    all: ['emails'] as const,
+
+    // Email history lists (invalidating this invalidates all list variations)
+    lists: () => [...queryKeys.emails.all, 'list'] as const,
+
+    // Email history lists scoped to a specific user
+    listsByUser: (userId: string) =>
+      [...queryKeys.emails.lists(), 'user', userId] as const,
+
+    // Email history with user-specific pagination
+    listByUser: (userId: string, limit: number, offset: number) =>
+      [...queryKeys.emails.listsByUser(userId), { limit, offset }] as const,
+
+    // Email history with specific pagination
+    list: (limit: number, offset: number) =>
+      [...queryKeys.emails.lists(), { limit, offset }] as const,
+
+    // Individual email details
+    detail: (emailId: string) =>
+      [...queryKeys.emails.all, 'detail', emailId] as const,
+  },
+
+  // Task domain keys (for async email generation)
+  tasks: {
+    // Base key for all task queries
+    all: ['tasks'] as const,
+
+    // Task status by task ID
+    status: (taskId: string) =>
+      [...queryKeys.tasks.all, 'status', taskId] as const,
+  },
+} as const;
+
+// Type helper for query key inference
+
+export type QueryKeys = typeof queryKeys;
+
+/**
+ * Usage Examples:
+ *
+ * 1. Fetch email history with pagination:
+ *    useQuery({
+ *      queryKey: queryKeys.emails.list(20, 0),
+ *      queryFn: () => api.email.getEmailHistory(20, 0),
+ *    })
+ *
+ * 2. Invalidate all email lists after generating new email:
+ *    queryClient.invalidateQueries({
+ *      queryKey: queryKeys.emails.lists()
+ *    })
+ *    // This invalidates all variations: list(20,0), list(50,0), etc.
+ *
+ * 3. Invalidate specific email after update:
+ *    queryClient.invalidateQueries({
+ *      queryKey: queryKeys.emails.detail(emailId)
+ *    })
+ *
+ * 4. Prefetch email on hover:
+ *    queryClient.prefetchQuery({
+ *      queryKey: queryKeys.emails.detail(emailId),
+ *      queryFn: () => api.email.getEmail(emailId),
+ *    })
+ *
+ * 5. Poll task status:
+ *    useQuery({
+ *      queryKey: queryKeys.tasks.status(taskId),
+ *      queryFn: () => api.email.getTaskStatus(taskId),
+ *      refetchInterval: (data) => {
+ *        if (data?.status === 'SUCCESS' || data?.status === 'FAILURE') {
+ *          return false; // Stop polling
+ *        }
+ *        return 3000; // Poll every 3 seconds
+ *      },
+ *    })
+ */
