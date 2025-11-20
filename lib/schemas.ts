@@ -5,11 +5,6 @@
 
 import { z } from "zod";
 
-/**
- * Template type enum - matches backend
- */
-export const TemplateTypeSchema = z.enum(["research", "book", "general"]);
-export type TemplateType = z.infer<typeof TemplateTypeSchema>;
 
 /**
  * Task status enum
@@ -24,7 +19,6 @@ export const EmailGenerationDataSchema = z.object({
   email_template: z.string().min(10, "Template must be at least 10 characters"),
   recipient_name: z.string().min(2, "Name must be at least 2 characters"),
   recipient_interest: z.string().min(3, "Interest must be at least 3 characters"),
-  template_type: TemplateTypeSchema,
 });
 export type EmailGenerationData = z.infer<typeof EmailGenerationDataSchema>;
 

@@ -3,7 +3,6 @@
 import { useState, ChangeEvent, FormEvent, useRef, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContextProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import MobileRestriction from "@/components/MobileRestriction";
 import Navbar from "@/components/Navbar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -247,8 +246,7 @@ export default function TemplateGenerationPage() {
 
   return (
     <ProtectedRoute>
-      <MobileRestriction enabled={true}> 
-        <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50">
           <Navbar />
           
           <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -352,7 +350,6 @@ export default function TemplateGenerationPage() {
             )}
           </div>
         </div>
-      </MobileRestriction>
     </ProtectedRoute>
   );
 }

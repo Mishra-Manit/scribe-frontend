@@ -22,9 +22,11 @@ export function QueryProvider({ children }: { children: ReactNode }) {
 
             refetchOnWindowFocus: true,
 
-            refetchOnMount: false,
+            // Refetch stale queries when component mounts (ensures fresh data on page reload)
+            refetchOnMount: true,
 
-            refetchOnReconnect: false,
+            // Refetch when user reconnects to internet
+            refetchOnReconnect: true,
           },
           mutations: {
             retry: 1,

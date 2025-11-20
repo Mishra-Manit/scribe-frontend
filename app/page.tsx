@@ -15,7 +15,7 @@ export default function LandingPage() {
     }
   }, [user, router]);
 
-  // Temporary helper: log the user's access token for backend testing.
+  // Temporary helper: log the user's access token for backend testing. Remove soon
   React.useEffect(() => {
     if (!user) return;
 

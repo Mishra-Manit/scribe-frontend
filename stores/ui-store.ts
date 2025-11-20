@@ -12,16 +12,16 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { TemplateType } from "@/lib/schemas";
 
 interface UIState {
+  // Hydration state (Next.js SSR protection)
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
+
   // Email generation form state
   emailTemplate: string;
   setEmailTemplate: (template: string) => void;
 
-  // Template type preference (persisted)
-  defaultTemplateType: TemplateType;
-  setDefaultTemplateType: (type: TemplateType) => void;
 
   // Recipient form fields
   recipientName: string;
@@ -45,8 +45,8 @@ interface UIState {
 }
 
 const initialState = {
+  _hasHydrated: false,
   emailTemplate: "",
-  defaultTemplateType: "research" as TemplateType,
   recipientName: "",
   recipientInterest: "",
   hoveredEmailId: null,
@@ -60,8 +60,8 @@ export const useUIStore = create<UIState>()(
       ...initialState,
 
       // Actions
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
       setEmailTemplate: (template) => set({ emailTemplate: template }),
-      setDefaultTemplateType: (type) => set({ defaultTemplateType: type }),
       setRecipientName: (name) => set({ recipientName: name }),
       setRecipientInterest: (interest) => set({ recipientInterest: interest }),
       setHoveredEmailId: (id) => set({ hoveredEmailId: id }),
@@ -80,13 +80,17 @@ export const useUIStore = create<UIState>()(
       name: "scribe-ui-storage", // localStorage key
       storage: createJSONStorage(() => localStorage),
 
-      // Only persist these fields (not hover/copied state)
+      // Only persist these fields (not hover/copied state or hydration flag)
       partialize: (state) => ({
         emailTemplate: state.emailTemplate,
-        defaultTemplateType: state.defaultTemplateType,
         recipientName: state.recipientName,
         recipientInterest: state.recipientInterest,
       }),
+
+      // Mark as hydrated after rehydration completes (Next.js SSR protection)
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
@@ -103,10 +107,6 @@ export const useSetEmailTemplate = () =>
   useUIStore((state) => state.setEmailTemplate);
 
 // Template type selectors
-export const useDefaultTemplateType = () =>
-  useUIStore((state) => state.defaultTemplateType);
-export const useSetDefaultTemplateType = () =>
-  useUIStore((state) => state.setDefaultTemplateType);
 
 // Recipient selectors
 export const useRecipientName = () => useUIStore((state) => state.recipientName);
@@ -131,6 +131,9 @@ export const useSetCopiedEmailId = () =>
 
 // Form reset selectors
 export const useResetForm = () => useUIStore((state) => state.resetForm);
+
+// Hydration selector (Next.js SSR protection)
+export const useHasHydrated = () => useUIStore((state) => state._hasHydrated);
 
 /**
  * Usage Examples:

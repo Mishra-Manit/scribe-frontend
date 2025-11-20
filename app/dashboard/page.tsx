@@ -8,13 +8,14 @@ import {
   useSetHoveredEmailId,
   useCopiedEmailId,
   useSetCopiedEmailId,
+  useHasHydrated,
 } from "@/stores/ui-store";
 import {
   usePendingCount,
   useProcessingCount,
+  useQueueHasHydrated,
 } from "@/stores/queue-store";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import MobileRestriction from "@/components/MobileRestriction";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,11 @@ import { Copy, Check } from "lucide-react";
 
 export default function DashboardPage() {
   const { user } = useAuth();
+
+  // Wait for Zustand stores to hydrate
+  const queueHydrated = useQueueHasHydrated();
+  const uiHydrated = useHasHydrated();
+  const storesReady = queueHydrated && uiHydrated;
 
   // Email history with React Query (replaces manual polling)
   const {
@@ -47,10 +53,23 @@ export default function DashboardPage() {
   const emailCount = emailHistory.length;
   const queueCount = pendingCount + processingCount;
 
+  // Wait for stores to hydrate before rendering
+  if (!storesReady) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent mb-4"></div>
+            <p className="text-gray-600">Loading dashboard...</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
+
   return (
     <ProtectedRoute>
-      <MobileRestriction enabled={false}>
-        <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50">
           <Navbar />
           
           <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
@@ -179,13 +198,13 @@ export default function DashboardPage() {
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">
                             Recipient Name
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">
                             Interest/Field
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
                             Template Type
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[50%]">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[60%]">
                             Email Content
                           </th>
                         </tr>
@@ -262,7 +281,6 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-      </MobileRestriction>
     </ProtectedRoute>
   );
 }

@@ -11,18 +11,10 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
   },
 });
 
-// Clear invalid sessions on initialization
+// Handle session restoration errors gracefully
 if (typeof window !== 'undefined') {
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (event === 'TOKEN_REFRESHED' && !session) {
-      // Token refresh failed, clear the invalid session
-      supabase.auth.signOut();
-    }
-  });
-
-  // Handle initial session restoration errors
-  supabase.auth.getSession().catch(() => {
-    // If session restoration fails, clear it silently
-    supabase.auth.signOut();
+  supabase.auth.getSession().catch((error) => {
+    console.error('[Supabase] Session restoration error:', error);
+    // Don't auto-sign out - let AuthContextProvider handle auth state
   });
 }

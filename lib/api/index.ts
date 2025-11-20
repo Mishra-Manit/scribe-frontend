@@ -22,7 +22,6 @@ import {
   type TaskStatusResponse,
   type EmailResponse,
   type TaskStatus,
-  type TemplateType,
   type UserProfile,
 } from "../schemas";
 
@@ -264,6 +263,5 @@ export type {
   TaskStatusResponse,
   EmailResponse,
   TaskStatus,
-  TemplateType,
   UserProfile,
 };

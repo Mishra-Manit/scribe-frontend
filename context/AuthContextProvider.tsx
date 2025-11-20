@@ -31,19 +31,38 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Listen for auth state changes - Supabase manages session internally
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.access_token) {
-        try {
+    let mounted = true;
+    let hasInitialized = false;
+
+    // Process session - unified function for both initial check and auth state changes
+    const processSession = async (session: any, event: string) => {
+      if (!mounted) return;
+
+      // Debug logging (development only)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Auth] Processing session:', {
+          event,
+          hasSession: !!session,
+          hasToken: !!session?.access_token,
+          userId: session?.user?.id,
+          hasInitialized,
+        });
+      }
+
+      try {
+        if (session?.access_token) {
           // Verify JWT locally using getClaims() - no server API call
           const { data: claims, error: claimsError } = await supabase.auth.getClaims();
 
-          if (claimsError || !claims) {
-            // Token invalid or expired
-            setUser(null);
-          } else if (session?.user) {
-            // Initialize user in backend database on sign in
-            if (event === 'SIGNED_IN') {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Auth] Claims result:', { hasError: !!claimsError, hasClaims: !!claims });
+          }
+
+          if (!claimsError && claims && session?.user) {
+            // Only initialize user on the FIRST actual sign-in event, not on page reloads
+            const isActualSignIn = event === 'SIGNED_IN' && !hasInitialized;
+
+            if (isActualSignIn) {
               try {
                 console.log('🔄 Initializing user in backend database...');
                 await api.user.initUser();
@@ -54,25 +73,77 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
               }
             }
 
-            // Token verified locally, set user
-            setUser({
-              uid: session.user.id,
-              email: session.user.email,
-              displayName: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-              claims: claims, // Verified claims from local verification
-            })
+            if (mounted) {
+              setUser({
+                uid: session.user.id,
+                email: session.user.email,
+                displayName: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+                claims: claims,
+              });
+            }
+          } else {
+            if (mounted) setUser(null);
           }
-        } catch (error) {
-          console.error('JWT verification error:', error);
+        } else {
+          if (mounted) setUser(null);
+        }
+      } catch (error) {
+        console.error('[Auth] Error processing session:', error);
+        if (mounted) setUser(null);
+      } finally {
+        // CRITICAL: Always set loading to false after processing
+        if (mounted) {
+          setLoading(false);
+          hasInitialized = true;
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Auth] Loading complete');
+          }
+        }
+      }
+    };
+
+    // SAFEGUARD: Force loading to false after 10 seconds
+    const timeoutId = setTimeout(() => {
+      if (mounted) {
+        console.warn('[Auth] Loading timeout - forcing loading state to false');
+        setLoading(false);
+        if (!hasInitialized) {
           setUser(null);
         }
-      } else {
-        setUser(null);
       }
-      setLoading(false);
+    }, 10000);
+
+    // Check initial session immediately
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      processSession(session, 'INITIAL_SESSION');
+    }).catch((error) => {
+      console.error('[Auth] getSession error:', error);
+      if (mounted) setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (!mounted) return;
+
+        // Skip if we're still processing the initial session
+        if (!hasInitialized && event === 'SIGNED_IN') {
+          if (process.env.NODE_ENV === 'development') {
+            console.log('[Auth] Skipping duplicate SIGNED_IN event during initialization');
+          }
+          return;
+        }
+
+        await processSession(session, event);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const logout = async () => {

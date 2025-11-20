@@ -174,7 +174,6 @@ export function useQueueProcessor() {
       email_template: emailTemplate,
       recipient_name: nextPending.name,
       recipient_interest: nextPending.interest,
-      template_type: nextPending.template_type,
     });
   }, [
     currentItemId,

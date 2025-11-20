@@ -10,7 +10,6 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { TemplateType } from "@/lib/schemas";
 
 /**
  * Queue item status
@@ -24,7 +23,6 @@ export interface QueueItem {
   id: string;
   name: string;
   interest: string;
-  template_type: TemplateType;
   status: QueueItemStatus;
   taskId?: string; // Celery task ID when processing
   error?: string; // Error message if failed
@@ -32,6 +30,10 @@ export interface QueueItem {
 }
 
 interface QueueState {
+  // Hydration state (Next.js SSR protection)
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
+
   // Queue state
   queue: QueueItem[];
 
@@ -59,7 +61,11 @@ export const useQueueStore = create<QueueState>()(
   persist(
     (set, get) => ({
       // Initial state
+      _hasHydrated: false,
       queue: [],
+
+      // Actions
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
 
       // Add items to queue
       addToQueue: (items) =>
@@ -138,6 +144,11 @@ export const useQueueStore = create<QueueState>()(
     {
       name: "scribe-queue-storage", // localStorage key
       storage: createJSONStorage(() => localStorage),
+
+      // Mark as hydrated after rehydration completes (Next.js SSR protection)
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );
@@ -167,6 +178,10 @@ export const useCompletedCount = () =>
 export const useFailedCount = () =>
   useQueueStore((state) => state.getFailedCount());
 
+// Hydration selector (Next.js SSR protection)
+export const useQueueHasHydrated = () =>
+  useQueueStore((state) => state._hasHydrated);
+
 /**
  * Usage Examples:
  *
@@ -195,7 +210,6 @@ export const useFailedCount = () =>
  *        email_template: template,
  *        recipient_name: nextItem.name,
  *        recipient_interest: nextItem.interest,
- *        template_type: nextItem.template_type,
  *      });
  *    }
  */

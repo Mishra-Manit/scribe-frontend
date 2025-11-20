@@ -4,6 +4,7 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import { QueryProvider } from "@/providers/QueryProvider"
 import { AuthContextProvider } from "../context/AuthContextProvider"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] })
 
@@ -22,7 +23,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <QueryProvider>
           <AuthContextProvider>
-            {children}
+            <ErrorBoundary>
+              {children}
+            </ErrorBoundary>
           </AuthContextProvider>
         </QueryProvider>
       </body>

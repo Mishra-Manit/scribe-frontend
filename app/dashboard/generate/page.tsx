@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
-import { useAddToQueue } from "@/stores/queue-store";
+import { useAddToQueue, useQueueHasHydrated } from "@/stores/queue-store";
 import {
   useEmailTemplate,
   useSetEmailTemplate,
@@ -11,21 +11,23 @@ import {
   useSetRecipientName,
   useRecipientInterest,
   useSetRecipientInterest,
-  useDefaultTemplateType,
-  useSetDefaultTemplateType,
+  useHasHydrated,
 } from "@/stores/ui-store";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import MobileRestriction from "@/components/MobileRestriction";
 import Navbar from "@/components/Navbar";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import type { TemplateType } from "@/lib/schemas";
 
 export default function GenerateEmailsPage() {
   const { user } = useAuth();
   const addToQueue = useAddToQueue();
+
+  // Wait for Zustand stores to hydrate
+  const queueHydrated = useQueueHasHydrated();
+  const uiHydrated = useHasHydrated();
+  const storesReady = queueHydrated && uiHydrated;
 
   // Form state from Zustand (auto-persisted to localStorage)
   const names = useRecipientName();
@@ -34,12 +36,24 @@ export default function GenerateEmailsPage() {
   const setInterest = useSetRecipientInterest();
   const template = useEmailTemplate();
   const setTemplate = useSetEmailTemplate();
-  const templateType = useDefaultTemplateType();
-  const setTemplateType = useSetDefaultTemplateType();
 
   // Local UI state (not persisted)
   const [loading, setLoading] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
+
+  // Wait for stores to hydrate before rendering
+  if (!storesReady) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
   const handleSubmit = async () => {
     if (!names.trim() || !interest.trim() || !template.trim()) {
@@ -61,7 +75,6 @@ export default function GenerateEmailsPage() {
     const itemsToQueue = professorNames.map(name => ({
       name: name,
       interest: interest,
-      template_type: templateType,
     }));
 
     addToQueue(itemsToQueue);
@@ -76,8 +89,7 @@ export default function GenerateEmailsPage() {
 
   return (
     <ProtectedRoute>
-      <MobileRestriction>
-        <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50">
           <Navbar />
           
           <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -94,13 +106,6 @@ export default function GenerateEmailsPage() {
                 Other placeholders you might use could be <code><strong>[University Name]</strong></code>, <code><strong>[Professor&apos;s Most Recent Research Paper]</strong></code>, etc.
                 Ensure these placeholders are clearly marked so the system can replace them correctly.
               </p>
-
-              <h3 className="text-md font-semibold text-gray-800 mt-4 mb-2">Template Types:</h3>
-              <div className="text-sm text-gray-700 bg-blue-50 p-3 rounded-md space-y-2 mb-4">
-                <p><strong>📚 Research:</strong> Best for reaching out about academic papers. The system will find and reference their publications from academic databases.</p>
-                <p><strong>📖 Book:</strong> Best for authors. The system will find and reference books they&apos;ve written.</p>
-                <p><strong>💼 General:</strong> For general outreach. Uses basic professional information without specific publications.</p>
-              </div>
 
               <h3 className="text-md font-semibold text-gray-800 mt-4 mb-2">Example Section:</h3>
               <div className="text-sm text-gray-700 bg-gray-100 p-3 rounded-md">
@@ -137,25 +142,6 @@ export default function GenerateEmailsPage() {
                         value={interest}
                         onChange={(e) => setInterest(e.target.value)}
                       />
-                    </div>
-
-                    <div>
-                      <Label htmlFor="templateType" className="form-label">
-                        Template Type
-                      </Label>
-                      <select
-                        id="templateType"
-                        className="w-full form-input text-black border border-gray-300 rounded-md p-2 bg-white"
-                        value={templateType}
-                        onChange={(e) => setTemplateType(e.target.value as TemplateType)}
-                      >
-                        <option value="research">Research (includes academic papers)</option>
-                        <option value="book">Book (includes authored books)</option>
-                        <option value="general">General (basic information)</option>
-                      </select>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Select the type of content to include in the personalized email
-                      </p>
                     </div>
 
                     <div>
@@ -196,7 +182,6 @@ export default function GenerateEmailsPage() {
             </div>
           </div>
         </div>
-      </MobileRestriction>
     </ProtectedRoute>
   );
 } 
