@@ -1,8 +1,19 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { useAuth } from "../../../context/AuthContextProvider";
+import { useAuth } from "@/hooks/use-auth";
+import { useAddToQueue } from "@/stores/queue-store";
+import {
+  useEmailTemplate,
+  useSetEmailTemplate,
+  useRecipientName,
+  useSetRecipientName,
+  useRecipientInterest,
+  useSetRecipientInterest,
+  useDefaultTemplateType,
+  useSetDefaultTemplateType,
+} from "@/stores/ui-store";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import MobileRestriction from "@/components/MobileRestriction";
 import Navbar from "@/components/Navbar";
@@ -10,25 +21,25 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { useEmailGeneration } from "@/context/EmailGenerationProvider";
-import { TemplateType } from "@/lib/api";
+import type { TemplateType } from "@/lib/schemas";
 
 export default function GenerateEmailsPage() {
   const { user } = useAuth();
-  const { addItemsToQueue } = useEmailGeneration();
-  const [names, setNames] = useState("");
-  const [interest, setInterest] = useState("");
-  const [template, setTemplate] = useState("");
-  const [templateType, setTemplateType] = useState<TemplateType>("research");
+  const addToQueue = useAddToQueue();
+
+  // Form state from Zustand (auto-persisted to localStorage)
+  const names = useRecipientName();
+  const setNames = useSetRecipientName();
+  const interest = useRecipientInterest();
+  const setInterest = useSetRecipientInterest();
+  const template = useEmailTemplate();
+  const setTemplate = useSetEmailTemplate();
+  const templateType = useDefaultTemplateType();
+  const setTemplateType = useSetDefaultTemplateType();
+
+  // Local UI state (not persisted)
   const [loading, setLoading] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
-
-  useEffect(() => {
-    const savedTemplate = localStorage.getItem('emailTemplate');
-    if (savedTemplate) {
-      setTemplate(savedTemplate);
-    }
-  }, []);
 
   const handleSubmit = async () => {
     if (!names.trim() || !interest.trim() || !template.trim()) {
@@ -44,23 +55,20 @@ export default function GenerateEmailsPage() {
     setLoading(true);
     setShowMessage(false);
 
-    localStorage.setItem('emailTemplate', template);
+    // No need to manually save to localStorage - Zustand handles this automatically
 
     const professorNames = names.split(",").map(name => name.trim());
     const itemsToQueue = professorNames.map(name => ({
       name: name,
       interest: interest,
-      source: 'generate' as const,
       template_type: templateType,
     }));
 
-    addItemsToQueue(itemsToQueue);
+    addToQueue(itemsToQueue);
 
-    // Clear the form fields
+    // Clear the form fields (template is kept for convenience)
     setNames("");
     setInterest("");
-    setTemplate("");
-    // Keep template type selected for convenience
 
     setLoading(false);
     setShowMessage(true);

@@ -1,80 +1,51 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAuth } from "../../context/AuthContextProvider";
+import { useAuth } from "@/hooks/use-auth";
+import { useEmailHistory } from "@/hooks/queries/useEmailHistory";
+import { useQueueProcessor } from "@/hooks/queries/useQueueProcessor";
+import {
+  useHoveredEmailId,
+  useSetHoveredEmailId,
+  useCopiedEmailId,
+  useSetCopiedEmailId,
+} from "@/stores/ui-store";
+import {
+  usePendingCount,
+  useProcessingCount,
+} from "@/stores/queue-store";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import MobileRestriction from "@/components/MobileRestriction";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
-import { useEmailGeneration } from "@/context/EmailGenerationProvider";
-import { api, EmailResponse } from "@/lib/api";
-import { supabase } from "@/config/supabase";
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { emailQueue, currentTaskStatus } = useEmailGeneration();
-  const [emailCount, setEmailCount] = useState(0);
-  const [emailHistory, setEmailHistory] = useState<EmailResponse[]>([]);
-  const [hoveredEmailId, setHoveredEmailId] = useState<string | null>(null);
-  const [copiedEmailId, setCopiedEmailId] = useState<string | null>(null);
 
-  // Temporary helper: surface the Supabase JWT once user is authenticated.
-  useEffect(() => {
-    if (!user) return;
+  // Email history with React Query (replaces manual polling)
+  const {
+    data: emailHistory = [],
+    isLoading: emailsLoading,
+    error: emailsError,
+  } = useEmailHistory();
 
-    supabase.auth
-      .getSession()
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("Failed to retrieve Supabase session", error);
-          return;
-        }
+  // Queue processor (replaces EmailGenerationProvider logic)
+  const { currentTaskStatus, isProcessing } = useQueueProcessor();
 
-        const token = data.session?.access_token;
-        if (token) {
-          console.log("Supabase JWT:", token);
-        } else {
-          console.warn("No active Supabase session found to extract a JWT.");
-        }
-      })
-      .catch((err) => {
-        console.error("Unexpected error while fetching Supabase session", err);
-      });
-  }, [user]);
+  // UI state from Zustand (replaces useState)
+  const hoveredEmailId = useHoveredEmailId();
+  const setHoveredEmailId = useSetHoveredEmailId();
+  const copiedEmailId = useCopiedEmailId();
+  const setCopiedEmailId = useSetCopiedEmailId();
 
-  // Fetch user's email history from backend API
-  useEffect(() => {
-    const fetchEmailHistory = async () => {
-      if (user?.uid) {
-        try {
-          const emails = await api.email.getEmailHistory(20, 0);
+  // Queue state
+  const pendingCount = usePendingCount();
+  const processingCount = useProcessingCount();
 
-          // Sort by created_at timestamp (newest first)
-          emails.sort((a, b) => {
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-          });
-
-          setEmailHistory(emails);
-          setEmailCount(emails.length);
-        } catch (error: unknown) {
-          console.error("Error fetching email history:", error);
-          setEmailHistory([]);
-          setEmailCount(0);
-        }
-      }
-    };
-
-    fetchEmailHistory();
-
-    // Set up polling for updates every 5 seconds
-    const pollInterval = setInterval(fetchEmailHistory, 5000);
-
-    return () => {
-      clearInterval(pollInterval);
-    };
-  }, [user]);
+  // Derived state
+  const emailCount = emailHistory.length;
+  const queueCount = pendingCount + processingCount;
 
   return (
     <ProtectedRoute>
@@ -171,11 +142,11 @@ export default function DashboardPage() {
                     </svg>
                   </CardHeader>
                   <CardContent>
-                    {emailQueue.length > 0 ? (
+                    {queueCount > 0 ? (
                       <>
                         <div className="text-2xl font-bold text-yellow-600">Generating...</div>
                         <p className="text-xs text-muted-foreground">
-                          {emailQueue.length} emails in queue
+                          {queueCount} emails in queue
                         </p>
                         {currentTaskStatus?.result?.current_step && (
                           <p className="text-xs text-gray-600 mt-1">

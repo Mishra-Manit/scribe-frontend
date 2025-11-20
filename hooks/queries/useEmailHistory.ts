@@ -6,7 +6,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { emailAPI } from '@/lib/api';
-import { useAuth } from '@/context/AuthContextProvider';
+import { useAuth } from '@/hooks/use-auth';
 
 /**
  * Fetch user's email history with automatic caching
@@ -31,18 +31,17 @@ export function useEmailHistory(limit = 20, offset = 0) {
     // Only run query if user is authenticated
     enabled: !!userId,
 
-    // Data is considered "fresh" for 2 minutes
-    staleTime: 2 * 60 * 1000,
+    // Data is considered "fresh" for 5 minutes (reduces API calls by 60x vs 5-sec polling)
+    staleTime: 5 * 60 * 1000,
 
-    // Keep data in cache for 5 minutes after component unmounts
-    gcTime: 5 * 60 * 1000,
+    // Keep data in cache for 10 minutes after component unmounts
+    gcTime: 10 * 60 * 1000,
 
     // Retry failed requests once
     retry: 1,
 
-    // Don't refetch on window focus (reduces API calls)
-    // Change to true if you want real-time updates
-    refetchOnWindowFocus: false,
+    // Refetch on window focus to show latest emails when user returns to tab
+    refetchOnWindowFocus: true,
 
     // Transform data before returning (sort by date)
     select: (data) => {
