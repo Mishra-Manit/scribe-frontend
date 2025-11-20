@@ -61,7 +61,8 @@ export function useTaskStatus({
 }: UseTaskStatusOptions) {
   const queryResult = useQuery({
     queryKey: queryKeys.tasks.status(taskId!),
-    queryFn: () => emailAPI.getTaskStatus(taskId!),
+    // Pass signal for automatic cancellation when component unmounts
+    queryFn: ({ signal }) => emailAPI.getTaskStatus(taskId!, { signal }),
     enabled: enabled && !!taskId,
 
     // Conditional polling - stops when task completes

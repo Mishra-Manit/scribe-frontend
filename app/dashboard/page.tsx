@@ -176,16 +176,16 @@ export default function DashboardPage() {
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">
                             Recipient Name
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[20%]">
                             Interest/Field
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">
                             Template Type
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[50%]">
                             Email Content
                           </th>
                         </tr>
@@ -202,8 +202,10 @@ export default function DashboardPage() {
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 align-top">
                                 {email.recipient_name}
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 align-top">
-                                {email.recipient_interest}
+                              <td className="px-6 py-4 text-sm text-gray-500 align-top">
+                                <div className="max-w-xs break-words">
+                                  {email.recipient_interest}
+                                </div>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 align-top">
                                 <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 capitalize">
@@ -211,7 +213,7 @@ export default function DashboardPage() {
                                 </span>
                               </td>
                               <td className="px-6 py-4 text-sm text-gray-500 relative">
-                                <div className="max-w-2xl">
+                                <div className="max-w-full">
                                   <pre className="whitespace-pre-wrap font-sans">
                                     {email.email_message || "No content"}
                                   </pre>

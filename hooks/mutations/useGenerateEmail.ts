@@ -2,7 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-keys";
-import { emailAPI } from "@/lib/api";
+import { emailAPI, ApiError, NetworkError, ValidationError, AuthenticationError } from "@/lib/api";
 import type { EmailGenerationData } from "@/lib/schemas";
 
 interface UseGenerateEmailOptions {
@@ -75,6 +75,17 @@ export function useGenerateEmail(options: UseGenerateEmailOptions = {}) {
     // On error: Failed to start task
     onError: (error, variables, context) => {
       console.error("Email generation failed to start:", error);
+
+      // Provide user-friendly error messages based on error type
+      if (error instanceof NetworkError) {
+        console.error("[Generation] Network error - user may be offline");
+      } else if (error instanceof ValidationError) {
+        console.error("[Generation] Validation error:", error.getUserMessage());
+      } else if (error instanceof AuthenticationError) {
+        console.error("[Generation] Auth error - user needs to re-login");
+      } else if (error instanceof ApiError) {
+        console.error("[Generation] API error:", error.getUserMessage());
+      }
 
       // Call custom onError callback
       options.onError?.(error as Error);

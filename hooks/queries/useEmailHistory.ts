@@ -26,7 +26,8 @@ export function useEmailHistory(limit = 20, offset = 0) {
     queryKey: queryKeys.emails.listByUser(userId!, limit, offset),
 
     // Function that fetches the data
-    queryFn: () => emailAPI.getEmailHistory(limit, offset),
+    // Pass signal for automatic cancellation when component unmounts
+    queryFn: ({ signal }) => emailAPI.getEmailHistory(limit, offset, { signal }),
 
     // Only run query if user is authenticated
     enabled: !!userId,
