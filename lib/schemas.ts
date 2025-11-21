@@ -41,7 +41,7 @@ export const TaskStatusResponseSchema = z.object({
     current_step: z.string().optional(),
     step_status: z.string().optional(),
     step_timings: z.record(z.string(), z.number()).optional(),
-  }).optional(),
+  }).nullish(), // Changed from .optional() to handle null from backend
   error: z.union([
     z.string(),
     z.object({
@@ -49,7 +49,7 @@ export const TaskStatusResponseSchema = z.object({
       type: z.string(),
       failed_step: z.string().optional(),
     }),
-  ]).optional(),
+  ]).nullish(), // Changed from .optional() to handle null from backend
 });
 export type TaskStatusResponse = z.infer<typeof TaskStatusResponseSchema>;
 

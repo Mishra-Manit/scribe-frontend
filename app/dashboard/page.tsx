@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/hooks/use-auth";
 import { useEmailHistory } from "@/hooks/queries/useEmailHistory";
-import { useQueueProcessor } from "@/hooks/queries/useQueueProcessor";
+import { useTaskStatus } from "@/hooks/queries/useTaskStatus";
 import {
   useHoveredEmailId,
   useSetHoveredEmailId,
@@ -14,6 +14,7 @@ import {
   usePendingCount,
   useProcessingCount,
   useQueueHasHydrated,
+  useCurrentProcessingItem,
 } from "@/stores/queue-store";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
@@ -36,8 +37,14 @@ export default function DashboardPage() {
     error: emailsError,
   } = useEmailHistory();
 
-  // Queue processor (replaces EmailGenerationProvider logic)
-  const { currentTaskStatus, isProcessing } = useQueueProcessor();
+  // Queue processor now runs in dashboard layout (app/dashboard/layout.tsx)
+  // This ensures it runs across all dashboard pages, not just this one
+
+  // Get current processing item to show step status
+  const currentProcessingItem = useCurrentProcessingItem();
+  const { data: currentTaskStatus } = useTaskStatus({
+    taskId: currentProcessingItem?.taskId || null,
+  });
 
   // UI state from Zustand (replaces useState)
   const hoveredEmailId = useHoveredEmailId();

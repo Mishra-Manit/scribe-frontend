@@ -46,6 +46,25 @@ import type { ApiRequestOptions } from "./types";
  *   retry: { maxAttempts: 3 }
  * })
  */
+function normalizeMessage(errorData: any, fallback: string): string {
+  const raw = errorData?.message ?? errorData?.detail;
+  if (!raw) return fallback;
+  if (typeof raw === "string") return raw;
+  if (Array.isArray(raw)) return raw.join(", ");
+  if (typeof raw === "object") {
+    // Try common shapes: { message: "..." } or { errors: {...} }
+    if (typeof raw.message === "string") return raw.message;
+    if (Array.isArray(raw.errors)) return raw.errors.join(", ");
+    try {
+      return JSON.stringify(raw);
+    } catch {
+      return fallback;
+    }
+  }
+  return String(raw);
+}
+
+
 export class ApiClient {
   private requestCache: RequestCache;
 

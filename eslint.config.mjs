@@ -11,6 +11,23 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/useQueueProcessor"],
+              message:
+                "useQueueProcessor should only be imported in /app/dashboard/layout.tsx. " +
+                "If you need queue functionality, use queue store selectors instead (e.g., useQueue, usePendingCount).",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;

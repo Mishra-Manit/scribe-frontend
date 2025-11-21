@@ -81,7 +81,6 @@ export default function GenerateEmailsPage() {
 
     // Clear the form fields (template is kept for convenience)
     setNames("");
-    setInterest("");
 
     setLoading(false);
     setShowMessage(true);
