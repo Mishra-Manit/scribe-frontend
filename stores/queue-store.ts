@@ -10,6 +10,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { TaskStatusResponse } from "@/lib/schemas";
 
 /**
  * Queue item status
@@ -36,6 +37,7 @@ interface QueueState {
 
   // Queue state
   queue: QueueItem[];
+  currentTaskStatus: TaskStatusResponse | null;
 
   // Actions
   addToQueue: (items: Omit<QueueItem, "id" | "status" | "createdAt">[]) => void;
@@ -48,6 +50,7 @@ interface QueueState {
   ) => void;
   clearQueue: () => void;
   clearCompleted: () => void;
+  updateCurrentTaskStatus: (status: TaskStatusResponse | null) => void;
 
   // Selectors (computed values)
   getNextPending: () => QueueItem | undefined;
@@ -63,6 +66,7 @@ export const useQueueStore = create<QueueState>()(
       // Initial state
       _hasHydrated: false,
       queue: [],
+      currentTaskStatus: null,
 
       // Actions
       setHasHydrated: (state) => set({ _hasHydrated: state }),
@@ -110,6 +114,9 @@ export const useQueueStore = create<QueueState>()(
         set((state) => ({
           queue: state.queue.filter((item) => item.status !== "completed"),
         })),
+        
+      // Update current task status
+      updateCurrentTaskStatus: (status) => set({ currentTaskStatus: status }),
 
       // Get next pending item
       getNextPending: () => {
@@ -177,6 +184,12 @@ export const useCompletedCount = () =>
   useQueueStore((state) => state.getCompletedCount());
 export const useFailedCount = () =>
   useQueueStore((state) => state.getFailedCount());
+
+// Get currently processing item
+export const useCurrentProcessingItem = () =>
+  useQueueStore((state) =>
+    state.queue.find((item) => item.status === "processing")
+  );
 
 // Hydration selector (Next.js SSR protection)
 export const useQueueHasHydrated = () =>

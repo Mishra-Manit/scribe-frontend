@@ -17,7 +17,7 @@ import { useAuth } from '@/hooks/use-auth';
  * - Built-in loading/error states
  * - Request deduplication (if called twice, only 1 API call)
  */
-export function useEmailHistory(limit = 20, offset = 0) {
+export function useEmailHistory(limit = 100, offset = 0) {
   const { user } = useAuth();
   const userId = user?.uid;
 

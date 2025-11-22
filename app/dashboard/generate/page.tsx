@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
-import { useAddToQueue, useQueueHasHydrated } from "@/stores/queue-store";
+import { useAddToQueue, useQueueHasHydrated, useQueueStore } from "@/stores/queue-store";
 import {
   useEmailTemplate,
   useSetEmailTemplate,
@@ -78,6 +78,22 @@ export default function GenerateEmailsPage() {
     }));
 
     addToQueue(itemsToQueue);
+
+    // Console log queue state after adding items (for debugging)
+    // Use setTimeout to ensure state has updated
+    setTimeout(() => {
+      const currentQueue = useQueueStore.getState();
+      console.log('=== QUEUE STATE AFTER GENERATE BUTTON CLICK ===');
+      console.log('Timestamp:', new Date().toISOString());
+      console.log('Queue Items:', currentQueue.queue);
+      console.log('Total in Queue:', currentQueue.queue.length);
+      console.log('Pending:', currentQueue.queue.filter(item => item.status === 'pending').length);
+      console.log('Processing:', currentQueue.queue.filter(item => item.status === 'processing').length);
+      console.log('Completed:', currentQueue.queue.filter(item => item.status === 'completed').length);
+      console.log('Failed:', currentQueue.queue.filter(item => item.status === 'failed').length);
+      console.log('LocalStorage:', localStorage.getItem('scribe-queue-storage'));
+      console.log('===============================================');
+    }, 100);
 
     // Clear the form fields (template is kept for convenience)
     setNames("");

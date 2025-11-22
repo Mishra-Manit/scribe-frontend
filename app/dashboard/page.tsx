@@ -2,7 +2,6 @@
 
 import { useAuth } from "@/hooks/use-auth";
 import { useEmailHistory } from "@/hooks/queries/useEmailHistory";
-import { useTaskStatus } from "@/hooks/queries/useTaskStatus";
 import {
   useHoveredEmailId,
   useSetHoveredEmailId,
@@ -14,7 +13,7 @@ import {
   usePendingCount,
   useProcessingCount,
   useQueueHasHydrated,
-  useCurrentProcessingItem,
+  useQueueStore,
 } from "@/stores/queue-store";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
@@ -33,18 +32,10 @@ export default function DashboardPage() {
   // Email history with React Query (replaces manual polling)
   const {
     data: emailHistory = [],
-    isLoading: emailsLoading,
-    error: emailsError,
   } = useEmailHistory();
 
-  // Queue processor now runs in dashboard layout (app/dashboard/layout.tsx)
-  // This ensures it runs across all dashboard pages, not just this one
-
-  // Get current processing item to show step status
-  const currentProcessingItem = useCurrentProcessingItem();
-  const { data: currentTaskStatus } = useTaskStatus({
-    taskId: currentProcessingItem?.taskId || null,
-  });
+  // Get current task status from Zustand store (updated by useQueueProcessor in layout)
+  const currentTaskStatus = useQueueStore((state) => state.currentTaskStatus);
 
   // UI state from Zustand (replaces useState)
   const hoveredEmailId = useHoveredEmailId();
@@ -170,12 +161,14 @@ export default function DashboardPage() {
                   <CardContent>
                     {queueCount > 0 ? (
                       <>
-                        <div className="text-2xl font-bold text-yellow-600">Generating...</div>
+                        <div className="text-2xl font-bold text-yellow-600 capitalize">
+                          {currentTaskStatus?.status?.toLowerCase() ?? 'Initializing...'}
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           {queueCount} emails in queue
                         </p>
                         {currentTaskStatus?.result?.current_step && (
-                          <p className="text-xs text-gray-600 mt-1">
+                          <p className="text-xs text-gray-600 mt-1 capitalize">
                             Step: {currentTaskStatus.result.current_step.replace(/_/g, ' ')}
                           </p>
                         )}

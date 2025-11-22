@@ -62,10 +62,25 @@ export function useGenerateEmail(options: UseGenerateEmailOptions = {}) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: EmailGenerationData) => emailAPI.generateEmail(data),
+    mutationFn: async (data: EmailGenerationData) => {
+      console.log('[useGenerateEmail] mutationFn called with:', data);
+      try {
+        const result = await emailAPI.generateEmail(data);
+        console.log('[useGenerateEmail] API call successful, result:', result);
+        return result;
+      } catch (error) {
+        console.error('[useGenerateEmail] API call failed:', error);
+        throw error;
+      }
+    },
+
+    onMutate: (variables) => {
+      console.log('[useGenerateEmail] onMutate called with:', variables);
+    },
 
     // On success: Task started, got task_id back
-    onSuccess: (response, variables, context) => {
+    onSuccess: (response) => {
+      console.log("[useGenerateEmail] onSuccess called");
       console.log("Email generation task started:", response.task_id);
 
       // Call custom onSuccess callback with task_id
@@ -73,7 +88,8 @@ export function useGenerateEmail(options: UseGenerateEmailOptions = {}) {
     },
 
     // On error: Failed to start task
-    onError: (error, variables, context) => {
+    onError: (error) => {
+      console.error("[useGenerateEmail] onError called");
       console.error("Email generation failed to start:", error);
 
       // Provide user-friendly error messages based on error type
@@ -92,7 +108,8 @@ export function useGenerateEmail(options: UseGenerateEmailOptions = {}) {
     },
 
     // On settled: Always invalidate email queries to ensure consistency
-    onSettled: () => {
+    onSettled: (data, error) => {
+      console.log('[useGenerateEmail] onSettled called', { data, error });
       // Invalidate all email list queries to refresh after generation
       // This will be triggered again after task completion, but doesn't hurt
       queryClient.invalidateQueries({

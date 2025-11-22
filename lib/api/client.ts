@@ -46,25 +46,6 @@ import type { ApiRequestOptions } from "./types";
  *   retry: { maxAttempts: 3 }
  * })
  */
-function normalizeMessage(errorData: any, fallback: string): string {
-  const raw = errorData?.message ?? errorData?.detail;
-  if (!raw) return fallback;
-  if (typeof raw === "string") return raw;
-  if (Array.isArray(raw)) return raw.join(", ");
-  if (typeof raw === "object") {
-    // Try common shapes: { message: "..." } or { errors: {...} }
-    if (typeof raw.message === "string") return raw.message;
-    if (Array.isArray(raw.errors)) return raw.errors.join(", ");
-    try {
-      return JSON.stringify(raw);
-    } catch {
-      return fallback;
-    }
-  }
-  return String(raw);
-}
-
-
 export class ApiClient {
   private requestCache: RequestCache;
 
@@ -73,21 +54,90 @@ export class ApiClient {
   }
 
   /**
-   * Get authentication token from Supabase session
+   * Get authentication token from Supabase session with retry logic
    *
-   * @throws {AuthenticationError} If no valid session exists
+   * Handles transient failures during Supabase initialization by retrying
+   * with progressive timeouts and exponential backoff.
+   *
+   * Strategy:
+   * - Attempt 1: 2s timeout (fast path for normal cases)
+   * - Attempt 2: 5s timeout (handles slow initialization)
+   * - Attempt 3: 10s timeout (final attempt for edge cases)
+   * - Backoff: 500ms, 1000ms between attempts
+   *
+   * @throws {AuthenticationError} If no valid session exists after retries
    */
   private async getAuthToken(): Promise<string> {
-    const {
-      data: { session },
-      error,
-    } = await supabase.auth.getSession();
+    console.log('[ApiClient] Attempting to get auth token...');
 
-    if (error || !session?.access_token) {
-      throw new AuthenticationError("No authentication token available");
+    const maxAttempts = 3;
+    const baseDelay = 500; // Start with 500ms
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        // Progressive timeout: 2s, 5s, 10s
+        const timeout = attempt === 1 ? 2000 : attempt === 2 ? 5000 : 10000;
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error(`Auth token retrieval timeout (attempt ${attempt}/${maxAttempts}, ${timeout}ms)`)), timeout);
+        });
+
+        const getSessionPromise = supabase.auth.getSession();
+
+        const {
+          data: { session },
+          error,
+        } = await Promise.race([getSessionPromise, timeoutPromise]) as Awaited<typeof getSessionPromise>;
+
+        console.log('[ApiClient] getSession returned', {
+          attempt,
+          hasSession: !!session,
+          error
+        });
+
+        if (error || !session?.access_token) {
+          console.error('[ApiClient] Auth error or no token:', { error, hasSession: !!session });
+
+          // Don't retry on definitive auth failures
+          if (error && error.message?.includes('not authenticated')) {
+            throw new AuthenticationError("No authentication token available");
+          }
+
+          // Retry on timeout or missing session
+          if (attempt < maxAttempts) {
+            const delay = baseDelay * Math.pow(2, attempt - 1);
+            console.warn(`[ApiClient] Retry ${attempt}/${maxAttempts} after ${delay}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue;
+          }
+
+          throw new AuthenticationError("No authentication token available");
+        }
+
+        console.log(`[ApiClient] Auth token retrieved successfully on attempt ${attempt}`);
+        return session.access_token;
+      } catch (error) {
+        console.error(`[ApiClient] Failed to get auth token (attempt ${attempt}/${maxAttempts}):`, error);
+
+        // If it's our custom AuthenticationError, don't retry
+        if (error instanceof AuthenticationError) {
+          throw error;
+        }
+
+        // If it's the last attempt, throw
+        if (attempt === maxAttempts) {
+          throw error;
+        }
+
+        // Otherwise retry with backoff
+        const delay = baseDelay * Math.pow(2, attempt - 1);
+        console.warn(`[ApiClient] Retrying after ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
     }
 
-    return session.access_token;
+    // Should never reach here
+    throw new AuthenticationError("Failed to get auth token after retries");
   }
 
   // Build request headers with authentication
@@ -182,7 +232,7 @@ export class ApiClient {
     options: ApiRequestOptions = {}
   ): Promise<T> {
     const {
-      retry = false, // Disable by default, let React Query handle query retries
+      retry,
       timeout = 60000, // 60 second default timeout
       deduplicate = (options.method || "GET") === "GET", // Auto-dedupe GET requests
       ...fetchOptions

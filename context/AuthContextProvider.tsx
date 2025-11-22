@@ -13,6 +13,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  supabaseReady: boolean;
   logout: () => Promise<void>;
 }
 
@@ -29,10 +30,39 @@ export const useAuth = () => {
 export const AuthContextProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [supabaseReady, setSupabaseReady] = useState(false)
 
   useEffect(() => {
     let mounted = true;
     let hasInitialized = false;
+
+    // Verify Supabase is ready by testing getSession() works without timeout
+    // This ensures the client is fully initialized and can handle concurrent calls
+    const verifySupabaseReady = async (): Promise<boolean> => {
+      try {
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Verification timeout')), 2000);
+        });
+
+        const { data, error } = await Promise.race([
+          supabase.auth.getSession(),
+          timeoutPromise
+        ]) as Awaited<ReturnType<typeof supabase.auth.getSession>>;
+
+        if (error) {
+          console.warn('[Auth] Supabase verification failed:', error);
+          return false;
+        }
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[Auth] Supabase client verified ready');
+        }
+        return true;
+      } catch (error) {
+        console.warn('[Auth] Supabase verification error:', error);
+        return false;
+      }
+    };
 
     // Process session - unified function for both initial check and auth state changes
     const processSession = async (session: any, event: string) => {
@@ -94,9 +124,29 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
         // CRITICAL: Always set loading to false after processing
         if (mounted) {
           setLoading(false);
+
+          // Verify Supabase is ready after first session processing
+          if (!hasInitialized) {
+            const isReady = await verifySupabaseReady();
+            setSupabaseReady(isReady);
+
+            // If not ready on first attempt, retry after 500ms delay
+            if (!isReady) {
+              setTimeout(async () => {
+                if (mounted) {
+                  const retryReady = await verifySupabaseReady();
+                  setSupabaseReady(retryReady);
+                  if (!retryReady) {
+                    console.error('[Auth] Supabase failed to initialize after retry');
+                  }
+                }
+              }, 500);
+            }
+          }
+
           hasInitialized = true;
           if (process.env.NODE_ENV === 'development') {
-            console.log('[Auth] Loading complete');
+            console.log('[Auth] Loading complete, supabaseReady:', supabaseReady);
           }
         }
       }
@@ -152,7 +202,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider value={{ user, loading, supabaseReady, logout }}>
       {children}
     </AuthContext.Provider>
   );
