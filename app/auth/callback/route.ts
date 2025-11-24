@@ -8,12 +8,16 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code');
   const error = requestUrl.searchParams.get('error');
   const errorDescription = requestUrl.searchParams.get('error_description');
+  
+  // Use NEXT_PUBLIC_SITE_URL if available, otherwise fallback to request origin
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin;
+  const baseUrl = siteUrl.endsWith('/') ? siteUrl.slice(0, -1) : siteUrl;
 
   // Handle OAuth errors
   if (error) {
     console.error('OAuth error:', error, errorDescription);
     return NextResponse.redirect(
-      `${requestUrl.origin}/?error=${encodeURIComponent(error)}`
+      `${baseUrl}/?error=${encodeURIComponent(error)}`
     );
   }
 
@@ -41,9 +45,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Successfully authenticated - redirect to dashboard
-    return NextResponse.redirect(`${requestUrl.origin}/dashboard`);
+    return NextResponse.redirect(`${baseUrl}/dashboard`);
   }
 
   // No code provided, redirect to home
-  return NextResponse.redirect(`${requestUrl.origin}/`);
+  return NextResponse.redirect(`${baseUrl}/`);
 }
