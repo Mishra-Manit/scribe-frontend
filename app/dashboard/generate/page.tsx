@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
-import { useAddToQueue, useQueueHasHydrated, useQueueStore } from "@/stores/queue-store";
+import { useQueueActions } from "@/hooks/useQueueActions";
 import {
   useEmailTemplate,
   useSetEmailTemplate,
@@ -22,12 +22,10 @@ import { Button } from "@/components/ui/button";
 
 export default function GenerateEmailsPage() {
   const { user } = useAuth();
-  const addToQueue = useAddToQueue();
+  const { addToQueue } = useQueueActions();
 
   // Wait for Zustand stores to hydrate
-  const queueHydrated = useQueueHasHydrated();
   const uiHydrated = useHasHydrated();
-  const storesReady = queueHydrated && uiHydrated;
 
   // Form state from Zustand (auto-persisted to localStorage)
   const names = useRecipientName();
@@ -42,7 +40,7 @@ export default function GenerateEmailsPage() {
   const [showMessage, setShowMessage] = useState(false);
 
   // Wait for stores to hydrate before rendering
-  if (!storesReady) {
+  if (!uiHydrated) {
     return (
       <ProtectedRoute>
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -78,22 +76,6 @@ export default function GenerateEmailsPage() {
     }));
 
     addToQueue(itemsToQueue);
-
-    // Console log queue state after adding items (for debugging)
-    // Use setTimeout to ensure state has updated
-    setTimeout(() => {
-      const currentQueue = useQueueStore.getState();
-      console.log('=== QUEUE STATE AFTER GENERATE BUTTON CLICK ===');
-      console.log('Timestamp:', new Date().toISOString());
-      console.log('Queue Items:', currentQueue.queue);
-      console.log('Total in Queue:', currentQueue.queue.length);
-      console.log('Pending:', currentQueue.queue.filter(item => item.status === 'pending').length);
-      console.log('Processing:', currentQueue.queue.filter(item => item.status === 'processing').length);
-      console.log('Completed:', currentQueue.queue.filter(item => item.status === 'completed').length);
-      console.log('Failed:', currentQueue.queue.filter(item => item.status === 'failed').length);
-      console.log('LocalStorage:', localStorage.getItem('scribe-queue-storage'));
-      console.log('===============================================');
-    }, 100);
 
     // Clear the form fields (template is kept for convenience)
     setNames("");

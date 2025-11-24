@@ -1,20 +1,23 @@
 "use client";
 
-import { useState, ChangeEvent, FormEvent, useRef, useEffect } from "react";
+export const dynamic = 'force-dynamic';
+
+import { useState, FormEvent, useRef, useEffect } from "react";
 import { useAuth } from "../../../context/AuthContextProvider";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import * as pdfjsLib from 'pdfjs-dist';
+import dynamicImport from 'next/dynamic';
 import { API_ENDPOINTS } from '@/config/api';
 
-// Specify the workerSrc for pdfjs-dist
-// pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
+// Dynamically import the PDF processing components to avoid SSR issues
+const PDFProcessor = dynamicImport(() => import('@/components/PDFProcessor'), { 
+  ssr: false,
+  loading: () => <div>Loading PDF processor...</div>
+});
 
 const MAX_GENERATIONS = 5; // ADDED: Maximum number of generations allowed
 
@@ -30,6 +33,17 @@ export default function TemplateGenerationPage() {
   const [copied, setCopied] = useState(false);
   const generatedTemplateRef = useRef<HTMLDivElement>(null);
   const [generationsLeft, setGenerationsLeft] = useState(MAX_GENERATIONS); // ADDED: State for tracking generations left
+
+  // Callback handlers for PDF processing
+  const handleFileProcessed = (file: File, extractedText: string) => {
+    setResumeFile(file);
+    setExtractedPdfText(extractedText);
+    setError(null);
+  };
+
+  const handleProcessingChange = (isProcessing: boolean) => {
+    setIsExtractingText(isProcessing);
+  };
 
   // ADDED: useEffect to load and persist generation count from localStorage
   useEffect(() => {
@@ -55,60 +69,6 @@ export default function TemplateGenerationPage() {
       setGenerationsLeft(MAX_GENERATIONS);
     }
   }, [user]); // Rerun when user object changes
-
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      setResumeFile(file);
-      setExtractedPdfText(""); // Clear previous text
-      setError(null);
-
-      if (file.type === "application/pdf") {
-        setIsExtractingText(true);
-        try {
-          const arrayBuffer = await file.arrayBuffer();
-          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-          let fullText = "";
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            fullText += textContent.items.map(item => ('str' in item && typeof item.str === 'string' ? item.str : '')).join(" ") + "\n";
-          }
-          
-          if (!fullText.trim()) {
-            setError("No text content was found in the uploaded PDF. It might be an image-only file, empty, or in an unsupported format. Please try a different PDF or copy the text manually.");
-            setExtractedPdfText("");
-          } else {
-            setExtractedPdfText(fullText);
-            setError(null); // Clear any previous file-related errors if text is successfully extracted
-          }
-        } catch (e) {
-          console.error("Error extracting PDF text:", e);
-          setError("Failed to extract text from PDF. Please ensure it\'s a valid PDF file.");
-          setExtractedPdfText("");
-        } finally {
-          setIsExtractingText(false);
-        }
-      } else if (file.type === "text/plain") {
-        // For plain text files, read as text directly
-        setIsExtractingText(true);
-         try {
-            const text = await file.text();
-            setExtractedPdfText(text);
-        } catch (e) {
-            console.error("Error reading text file:", e);
-            setError("Failed to read text from file.");
-            setExtractedPdfText("");
-        } finally {
-            setIsExtractingText(false);
-        }
-      } else {
-        // For other file types like DOCX, we won't extract text client-side for now.
-        // The handleSubmit function will need to be adjusted if server-side extraction is used.
-        setExtractedPdfText("Text extraction for this file type is not supported in the browser. The file will be sent as is.");
-      }
-    }
-  };
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -259,15 +219,10 @@ export default function TemplateGenerationPage() {
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
-                    <Label htmlFor="resume" className="block text-sm font-medium text-gray-700 mb-2">
-                      Upload Resume (PDF, TXT supported for direct text extraction)
-                    </Label>
-                    <Input
-                      id="resume"
-                      type="file"
-                      accept=".pdf,.doc,.docx,.txt"
-                      onChange={handleFileChange}
-                      className="w-full h-10 px-3 py-1.5 text-gray-900 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500 file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                    <PDFProcessor 
+                      onFileProcessed={handleFileProcessed}
+                      onError={setError}
+                      onProcessingChange={handleProcessingChange}
                     />
                     {resumeFile && <p className="mt-2 text-sm text-gray-500">Selected file: {resumeFile.name} ({resumeFile.type})</p>}
                     {isExtractingText && <p className="mt-2 text-sm text-blue-600">Extracting text from file...</p>}

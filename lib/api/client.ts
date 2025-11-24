@@ -1,4 +1,3 @@
-import { supabase } from "@/config/supabase";
 import { API_BASE_URL } from "@/config/api";
 import { z } from "zod";
 import {
@@ -13,6 +12,7 @@ import {
 import { withRetry, fetchWithTimeout } from "./retry";
 import { RequestCache } from "./deduplication";
 import type { ApiRequestOptions } from "./types";
+import { sessionManager } from "@/lib/auth/session-manager";
 
 /**
  * Modern API client with production-grade enhancements
@@ -54,90 +54,16 @@ export class ApiClient {
   }
 
   /**
-   * Get authentication token from Supabase session with retry logic
+   * Get authentication token from session cache
    *
-   * Handles transient failures during Supabase initialization by retrying
-   * with progressive timeouts and exponential backoff.
+   * Uses SessionManager for cached, mutex-protected token retrieval.
+   * This eliminates concurrent getSession() calls and provides instant
+   * token access after initial fetch.
    *
-   * Strategy:
-   * - Attempt 1: 2s timeout (fast path for normal cases)
-   * - Attempt 2: 5s timeout (handles slow initialization)
-   * - Attempt 3: 10s timeout (final attempt for edge cases)
-   * - Backoff: 500ms, 1000ms between attempts
-   *
-   * @throws {AuthenticationError} If no valid session exists after retries
+   * @throws {AuthenticationError} If no valid session exists
    */
-  private async getAuthToken(): Promise<string> {
-    console.log('[ApiClient] Attempting to get auth token...');
-
-    const maxAttempts = 3;
-    const baseDelay = 500; // Start with 500ms
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        // Progressive timeout: 2s, 5s, 10s
-        const timeout = attempt === 1 ? 2000 : attempt === 2 ? 5000 : 10000;
-
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error(`Auth token retrieval timeout (attempt ${attempt}/${maxAttempts}, ${timeout}ms)`)), timeout);
-        });
-
-        const getSessionPromise = supabase.auth.getSession();
-
-        const {
-          data: { session },
-          error,
-        } = await Promise.race([getSessionPromise, timeoutPromise]) as Awaited<typeof getSessionPromise>;
-
-        console.log('[ApiClient] getSession returned', {
-          attempt,
-          hasSession: !!session,
-          error
-        });
-
-        if (error || !session?.access_token) {
-          console.error('[ApiClient] Auth error or no token:', { error, hasSession: !!session });
-
-          // Don't retry on definitive auth failures
-          if (error && error.message?.includes('not authenticated')) {
-            throw new AuthenticationError("No authentication token available");
-          }
-
-          // Retry on timeout or missing session
-          if (attempt < maxAttempts) {
-            const delay = baseDelay * Math.pow(2, attempt - 1);
-            console.warn(`[ApiClient] Retry ${attempt}/${maxAttempts} after ${delay}ms...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            continue;
-          }
-
-          throw new AuthenticationError("No authentication token available");
-        }
-
-        console.log(`[ApiClient] Auth token retrieved successfully on attempt ${attempt}`);
-        return session.access_token;
-      } catch (error) {
-        console.error(`[ApiClient] Failed to get auth token (attempt ${attempt}/${maxAttempts}):`, error);
-
-        // If it's our custom AuthenticationError, don't retry
-        if (error instanceof AuthenticationError) {
-          throw error;
-        }
-
-        // If it's the last attempt, throw
-        if (attempt === maxAttempts) {
-          throw error;
-        }
-
-        // Otherwise retry with backoff
-        const delay = baseDelay * Math.pow(2, attempt - 1);
-        console.warn(`[ApiClient] Retrying after ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-
-    // Should never reach here
-    throw new AuthenticationError("Failed to get auth token after retries");
+  async getAuthToken(): Promise<string> {
+    return sessionManager.getToken();
   }
 
   // Build request headers with authentication
@@ -347,3 +273,6 @@ export class ApiClient {
 
 // Singleton API client instance
 export const apiClient = new ApiClient();
+
+// Export the getAuthToken method for external use
+export const getAuthToken = () => apiClient.getAuthToken();

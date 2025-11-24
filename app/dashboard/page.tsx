@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import { useEmailHistory } from "@/hooks/queries/useEmailHistory";
+import { useEmailHistory } from "@/hooks/useEmailHistory";
 import {
   useHoveredEmailId,
   useSetHoveredEmailId,
@@ -9,50 +10,108 @@ import {
   useSetCopiedEmailId,
   useHasHydrated,
 } from "@/stores/ui-store";
-import {
-  usePendingCount,
-  useProcessingCount,
-  useQueueHasHydrated,
-  useQueueStore,
-} from "@/stores/queue-store";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Shield } from "lucide-react";
+import { QueueStatus } from "@/components/QueueStatus";
+import { supabase } from "@/config/supabase";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, supabaseReady } = useAuth();
 
   // Wait for Zustand stores to hydrate
-  const queueHydrated = useQueueHasHydrated();
   const uiHydrated = useHasHydrated();
-  const storesReady = queueHydrated && uiHydrated;
 
-  // Email history with React Query (replaces manual polling)
+  // Email history with React Query
   const {
     data: emailHistory = [],
   } = useEmailHistory();
 
-  // Get current task status from Zustand store (updated by useQueueProcessor in layout)
-  const currentTaskStatus = useQueueStore((state) => state.currentTaskStatus);
-
-  // UI state from Zustand (replaces useState)
+  // UI state from Zustand
   const hoveredEmailId = useHoveredEmailId();
   const setHoveredEmailId = useSetHoveredEmailId();
   const copiedEmailId = useCopiedEmailId();
   const setCopiedEmailId = useSetCopiedEmailId();
 
-  // Queue state
-  const pendingCount = usePendingCount();
-  const processingCount = useProcessingCount();
+  // Auth check state
+  const [authCheckRunning, setAuthCheckRunning] = useState(false);
+  const [authCheckResult, setAuthCheckResult] = useState<string | null>(null);
 
   // Derived state
   const emailCount = emailHistory.length;
-  const queueCount = pendingCount + processingCount;
+
+  // Auth check handler
+  const handleAuthCheck = async () => {
+    setAuthCheckRunning(true);
+    setAuthCheckResult(null);
+
+    console.log('╔═══════════════════════════════════════════════════════════╗');
+    console.log('║ [Dashboard] 🔍 AUTH CHECK BUTTON CLICKED                 ║');
+    console.log('╚═══════════════════════════════════════════════════════════╝');
+    console.log('[Dashboard] 📊 Initial state:', {
+      hasUser: !!user,
+      userId: user?.uid,
+      userEmail: user?.email,
+      supabaseReady,
+      timestamp: new Date().toISOString()
+    });
+
+    try {
+      console.log('[Dashboard] 📡 Calling supabase.auth.getSession()...');
+      const startTime = Date.now();
+
+      // Add timeout to match ApiClient behavior
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          console.log('[Dashboard] ⏱️  Auth check timeout after 5000ms');
+          reject(new Error('Auth check timeout after 5000ms'));
+        }, 5000);
+      });
+
+      const sessionPromise = supabase.auth.getSession();
+
+      const { data, error } = await Promise.race([
+        sessionPromise,
+        timeoutPromise
+      ]) as Awaited<typeof sessionPromise>;
+
+      const duration = Date.now() - startTime;
+
+      console.log(`[Dashboard] ✅ getSession() completed in ${duration}ms`);
+      console.log('[Dashboard] 📊 Session result:', {
+        hasSession: !!data?.session,
+        hasToken: !!data?.session?.access_token,
+        tokenLength: data?.session?.access_token?.length || 0,
+        userId: data?.session?.user?.id,
+        userEmail: data?.session?.user?.email,
+        error: error?.message,
+        duration: `${duration}ms`
+      });
+
+      if (error) {
+        console.error('[Dashboard] ❌ Auth check failed:', error);
+        setAuthCheckResult(`❌ Failed: ${error.message}`);
+      } else if (!data?.session?.access_token) {
+        console.warn('[Dashboard] ⚠️  No auth token found');
+        setAuthCheckResult('⚠️  No auth token found');
+      } else {
+        console.log('[Dashboard] ✅ Auth check successful!');
+        setAuthCheckResult(`✅ Success (${duration}ms) - Token: ${data.session.access_token.substring(0, 20)}...`);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[Dashboard] ❌ Auth check exception:', error);
+      setAuthCheckResult(`❌ Exception: ${errorMessage}`);
+    } finally {
+      console.log('╔═══════════════════════════════════════════════════════════╗\n');
+      setAuthCheckRunning(false);
+    }
+  };
 
   // Wait for stores to hydrate before rendering
-  if (!storesReady) {
+  if (!uiHydrated) {
     return (
       <ProtectedRoute>
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -140,50 +199,58 @@ export default function DashboardPage() {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Status
-                    </CardTitle>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      className="h-4 w-4 text-muted-foreground"
-                    >
-                      <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                    </svg>
-                  </CardHeader>
-                  <CardContent>
-                    {queueCount > 0 ? (
+                <QueueStatus />
+              </div>
+            </div>
+
+            {/* Auth Check Section */}
+            <div className="px-4 py-6 sm:px-0">
+              <Card className="border-2 border-blue-200 bg-blue-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-blue-900">
+                    <Shield className="h-5 w-5" />
+                    Authentication Debug
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-sm text-blue-800">
+                    <p className="mb-2">
+                      <strong>Purpose:</strong> This button tests the same Supabase auth flow
+                      that the generate button uses. Check the browser console for detailed logs.
+                    </p>
+                    <p className="mb-4">
+                      <strong>Status:</strong> Supabase Ready = {supabaseReady ? '✅ Yes' : '❌ No'}
+                    </p>
+                  </div>
+                  <Button
+                    onClick={handleAuthCheck}
+                    disabled={authCheckRunning}
+                    variant="outline"
+                    className="w-full border-blue-300 hover:bg-blue-100"
+                  >
+                    {authCheckRunning ? (
                       <>
-                        <div className="text-2xl font-bold text-yellow-600 capitalize">
-                          {currentTaskStatus?.status?.toLowerCase() ?? 'Initializing...'}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {queueCount} emails in queue
-                        </p>
-                        {currentTaskStatus?.result?.current_step && (
-                          <p className="text-xs text-gray-600 mt-1 capitalize">
-                            Step: {currentTaskStatus.result.current_step.replace(/_/g, ' ')}
-                          </p>
-                        )}
+                        <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent mr-2"></div>
+                        Running Auth Check...
                       </>
                     ) : (
                       <>
-                        <div className="text-2xl font-bold text-green-600">All emails generated</div>
-                        <p className="text-xs text-muted-foreground">
-                          Queue is empty
-                        </p>
+                        <Shield className="h-4 w-4 mr-2" />
+                        Run Auth Check
                       </>
                     )}
-                  </CardContent>
-                </Card>
-              </div>
+                  </Button>
+                  {authCheckResult && (
+                    <div className={`p-3 rounded-md text-sm font-mono ${
+                      authCheckResult.startsWith('✅')
+                        ? 'bg-green-100 text-green-800 border border-green-300'
+                        : 'bg-red-100 text-red-800 border border-red-300'
+                    }`}>
+                      {authCheckResult}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
 
             {/* Email History Section */}

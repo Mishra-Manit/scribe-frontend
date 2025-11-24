@@ -1,7 +1,8 @@
 "use client"
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { supabase } from "../config/supabase";
 import { api } from "../lib/api";
+import { sessionManager } from "@/lib/auth/session-manager";
 
 interface User {
   uid: string;
@@ -31,35 +32,48 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [supabaseReady, setSupabaseReady] = useState(false)
+  
+  // Use ref to track initialization state so timeout can check current value
+  const hasInitializedRef = useRef(false);
 
   useEffect(() => {
     let mounted = true;
-    let hasInitialized = false;
 
     // Verify Supabase is ready by testing getSession() works without timeout
     // This ensures the client is fully initialized and can handle concurrent calls
     const verifySupabaseReady = async (): Promise<boolean> => {
+      console.log('[Auth] 🔍 VERIFYING SUPABASE READY STATE...');
+      const verifyStart = Date.now();
+
       try {
         const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Verification timeout')), 2000);
+          setTimeout(() => {
+            console.log('[Auth] ⏱️  Verification timeout triggered after 2000ms');
+            reject(new Error('Verification timeout'));
+          }, 2000);
         });
 
+        console.log('[Auth] 📡 Calling supabase.auth.getSession() for verification...');
         const { data, error } = await Promise.race([
           supabase.auth.getSession(),
           timeoutPromise
         ]) as Awaited<ReturnType<typeof supabase.auth.getSession>>;
 
+        const verifyDuration = Date.now() - verifyStart;
+
         if (error) {
-          console.warn('[Auth] Supabase verification failed:', error);
+          console.warn(`[Auth] ❌ Supabase verification failed (${verifyDuration}ms):`, error);
           return false;
         }
 
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[Auth] Supabase client verified ready');
-        }
+        console.log(`[Auth] ✅ Supabase client verified ready (${verifyDuration}ms)`, {
+          hasSession: !!data.session,
+          hasToken: !!data.session?.access_token
+        });
         return true;
       } catch (error) {
-        console.warn('[Auth] Supabase verification error:', error);
+        const verifyDuration = Date.now() - verifyStart;
+        console.warn(`[Auth] ❌ Supabase verification error (${verifyDuration}ms):`, error);
         return false;
       }
     };
@@ -68,42 +82,55 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
     const processSession = async (session: any, event: string) => {
       if (!mounted) return;
 
-      // Debug logging (development only)
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[Auth] Processing session:', {
-          event,
-          hasSession: !!session,
-          hasToken: !!session?.access_token,
-          userId: session?.user?.id,
-          hasInitialized,
-        });
-      }
+      console.log('╔═══════════════════════════════════════════════════════════╗');
+      console.log('║ [Auth] 📋 PROCESSING SESSION                              ║');
+      console.log('╚═══════════════════════════════════════════════════════════╝');
+      console.log('[Auth] 🎯 Event:', event);
+      console.log('[Auth] 📊 Session state:', {
+        hasSession: !!session,
+        hasToken: !!session?.access_token,
+        tokenLength: session?.access_token?.length || 0,
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        hasInitialized: hasInitializedRef.current,
+        timestamp: new Date().toISOString()
+      });
 
       try {
         if (session?.access_token) {
           // Verify JWT locally using getClaims() - no server API call
+          console.log('[Auth] 🔑 Getting claims from JWT...');
+          const claimsStart = Date.now();
           const { data: claims, error: claimsError } = await supabase.auth.getClaims();
+          const claimsDuration = Date.now() - claimsStart;
 
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[Auth] Claims result:', { hasError: !!claimsError, hasClaims: !!claims });
-          }
+          console.log(`[Auth] 📝 Claims result (${claimsDuration}ms):`, {
+            hasError: !!claimsError,
+            hasClaims: !!claims,
+            error: claimsError?.message
+          });
 
           if (!claimsError && claims && session?.user) {
             // Only initialize user on the FIRST actual sign-in event, not on page reloads
-            const isActualSignIn = event === 'SIGNED_IN' && !hasInitialized;
+            const isActualSignIn = event === 'SIGNED_IN' && !hasInitializedRef.current;
 
             if (isActualSignIn) {
               try {
-                console.log('🔄 Initializing user in backend database...');
+                console.log('[Auth] 🔄 Initializing user in backend database...');
                 await api.user.initUser();
-                console.log('✅ User initialized in backend database');
+                console.log('[Auth] ✅ User initialized in backend database');
               } catch (error) {
-                console.error('⚠️  User initialization failed (might already exist):', error);
+                console.error('[Auth] ⚠️  User initialization failed (might already exist):', error);
                 // Continue anyway - endpoint is idempotent
               }
             }
 
             if (mounted) {
+              console.log('[Auth] ✅ Setting user state:', {
+                uid: session.user.id,
+                email: session.user.email,
+                displayName: session.user.user_metadata?.full_name || session.user.email?.split('@')[0]
+              });
               setUser({
                 uid: session.user.id,
                 email: session.user.email,
@@ -112,42 +139,50 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
               });
             }
           } else {
+            console.log('[Auth] ❌ No valid claims or user - clearing user state');
             if (mounted) setUser(null);
           }
         } else {
+          console.log('[Auth] ❌ No session/token - clearing user state');
           if (mounted) setUser(null);
         }
       } catch (error) {
-        console.error('[Auth] Error processing session:', error);
+        console.error('[Auth] ❌ Error processing session:', error);
         if (mounted) setUser(null);
       } finally {
         // CRITICAL: Always set loading to false after processing
         if (mounted) {
+          console.log('[Auth] 🏁 Finalizing session processing...');
           setLoading(false);
 
           // Verify Supabase is ready after first session processing
-          if (!hasInitialized) {
+          if (!hasInitializedRef.current) {
+            console.log('[Auth] 🔍 First initialization - verifying Supabase ready...');
             const isReady = await verifySupabaseReady();
             setSupabaseReady(isReady);
 
             // If not ready on first attempt, retry after 500ms delay
             if (!isReady) {
+              console.log('[Auth] ⚠️  Not ready - scheduling retry in 500ms...');
               setTimeout(async () => {
                 if (mounted) {
                   const retryReady = await verifySupabaseReady();
                   setSupabaseReady(retryReady);
                   if (!retryReady) {
-                    console.error('[Auth] Supabase failed to initialize after retry');
+                    console.error('[Auth] ❌ Supabase failed to initialize after retry');
                   }
                 }
               }, 500);
             }
           }
 
-          hasInitialized = true;
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[Auth] Loading complete, supabaseReady:', supabaseReady);
-          }
+          hasInitializedRef.current = true;
+          console.log('[Auth] ✅ Session processing complete:', {
+            hasInitialized: hasInitializedRef.current,
+            loading: false,
+            supabaseReady
+          });
+          console.log('╔═══════════════════════════════════════════════════════════╗\n');
         }
       }
     };
@@ -156,32 +191,29 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
     const timeoutId = setTimeout(() => {
       if (mounted) {
         console.warn('[Auth] Loading timeout - forcing loading state to false');
+        console.log('[Auth] Timeout check - hasInitialized:', hasInitializedRef.current);
         setLoading(false);
-        if (!hasInitialized) {
+        if (!hasInitializedRef.current) {
+          console.warn('[Auth] Timeout triggered before initialization - clearing user');
           setUser(null);
         }
       }
     }, 10000);
 
-    // Check initial session immediately
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      processSession(session, 'INITIAL_SESSION');
-    }).catch((error) => {
-      console.error('[Auth] getSession error:', error);
-      if (mounted) setLoading(false);
-    });
-
     // Listen for auth state changes
+    // Note: onAuthStateChange will automatically trigger with the current session when initialized
+    console.log('[Auth] 🚀 AuthContextProvider initializing - setting up auth listener...');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!mounted) return;
+        console.log(`[Auth] 🔔 Auth state change event received: ${event}`);
+        if (!mounted) {
+          console.log('[Auth] ⚠️  Component unmounted - ignoring event');
+          return;
+        }
 
         // Skip if we're still processing the initial session
-        if (!hasInitialized && event === 'SIGNED_IN') {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[Auth] Skipping duplicate SIGNED_IN event during initialization');
-          }
+        if (!hasInitializedRef.current && event === 'SIGNED_IN') {
+          console.log('[Auth] ⏭️  Skipping duplicate SIGNED_IN event during initialization');
           return;
         }
 
@@ -197,6 +229,8 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   }, []);
 
   const logout = async () => {
+    // Clear session cache before signing out
+    sessionManager.clearCache();
     setUser(null);
     await supabase.auth.signOut();
   };
