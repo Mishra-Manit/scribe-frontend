@@ -12,7 +12,7 @@ import {
 import { withRetry, fetchWithTimeout } from "./retry";
 import { RequestCache } from "./deduplication";
 import type { ApiRequestOptions } from "./types";
-import { sessionManager } from "@/lib/auth/session-manager";
+import { useAuthStore } from "@/stores/auth-store";
 
 /**
  * Modern API client with production-grade enhancements
@@ -54,20 +54,29 @@ export class ApiClient {
   }
 
   /**
-   * Get authentication token from session cache
+   * Get authentication token from Zustand store (SYNCHRONOUS)
    *
-   * Uses SessionManager for cached, mutex-protected token retrieval.
-   * This eliminates concurrent getSession() calls and provides instant
-   * token access after initial fetch.
+   * Returns the current access token from the cached session in Zustand.
+   * No async calls, no network requests - instant token access.
+   *
+   * Supabase handles ALL token refresh logic via autoRefreshToken.
+   * This method just retrieves the current token snapshot.
    *
    * @throws {AuthenticationError} If no valid session exists
    */
-  async getAuthToken(): Promise<string> {
-    return sessionManager.getToken();
+  getAuthToken(): string {
+    const token = useAuthStore.getState().getToken();
+
+    if (!token) {
+      console.error('[ApiClient] No valid auth token available');
+      throw new AuthenticationError('No valid authentication token');
+    }
+
+    return token;
   }
 
-  // Build request headers with authentication
-  private async buildHeaders(options: ApiRequestOptions): Promise<Headers> {
+  // Build request headers with authentication (SYNCHRONOUS)
+  private buildHeaders(options: ApiRequestOptions): Headers {
     const headers = new Headers(options.headers);
 
     // Add Content-Type if not present and body exists
@@ -77,7 +86,7 @@ export class ApiClient {
 
     // Add Authorization header if not skipping auth
     if (!options.skipAuth) {
-      const token = await this.getAuthToken();
+      const token = this.getAuthToken();
       headers.set("Authorization", `Bearer ${token}`);
     }
 
@@ -167,8 +176,8 @@ export class ApiClient {
     // Request factory (called by retry logic or deduplication cache)
     const makeRequest = async (): Promise<T> => {
       try {
-        // Build headers with authentication
-        const headers = await this.buildHeaders(options);
+        // Build headers with authentication (synchronous - no await needed!)
+        const headers = this.buildHeaders(options);
 
         // Make request with timeout
         const response = await fetchWithTimeout(`${API_BASE_URL}${endpoint}`, {

@@ -1,599 +1,419 @@
-# API Client Documentation - Phase 3 Enhanced
+# Scribe Documentation
 
-## Overview
+## What is Scribe?
 
-The Scribe API client provides a robust, production-ready interface for communicating with the backend API. This Phase 3 enhancement includes request cancellation, retry logic, error handling, and runtime validation.
+Scribe is a SaaS application designed for academic outreach automation. It helps students generate personalized cold emails to professors and researchers by combining web scraping, AI-powered content generation, and smart template processing. The application streamlines the process of reaching out to potential research mentors with contextually relevant, personalized communications.
 
-## Features
+## Tech Stack
 
-- ✅ **Request Cancellation** - AbortController integration with React Query
-- ✅ **Retry Logic** - Exponential backoff for transient failures
-- ✅ **Error Handling** - Custom error classes for granular error handling
-- ✅ **Type Safety** - Full TypeScript support with Zod validation
-- ✅ **Request Deduplication** - Prevents duplicate concurrent requests
-- ✅ **Configurable Timeouts** - Per-request timeout configuration
-- ✅ **JWT Authentication** - Automatic Supabase token management
+### Frontend
+- **Next.js 15.3.2** - React framework with App Router and Server Components
+- **React 19.0.0** - UI library
+- **TypeScript 5.x** - Type safety
+- **Zustand 5.0.8** - Client-side state management (UI state, queue)
+- **TanStack Query v5** (React Query) - Server state, caching, data fetching
+- **Tailwind CSS 3.3.5** - Styling
+- **shadcn/ui** - Component library (Radix UI primitives)
+- **Zod 4.1.12** - Runtime validation
+- **Framer Motion 12.12.2** - Animations
+
+### Backend
+- **FastAPI** (Python) - External backend service
+  - Production: `https://api.manit.codes`
+  - Development: `http://localhost:8000`
+- **Celery** - Asynchronous task processing
+- **Redis** - Task queue backend
+
+### Infrastructure
+- **Supabase** - Authentication (Google OAuth) and PostgreSQL database
+- **Vercel** - Frontend deployment (Next.js)
+- **Custom** - Backend deployment
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         Browser (Client)                         │
+│                                                                   │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │              Next.js 15 Application                        │ │
+│  │                                                             │ │
+│  │  ┌─────────────────┐      ┌──────────────────┐            │ │
+│  │  │  React Components│      │  Queue Processor │            │ │
+│  │  │  - Dashboard     │◄────►│  (Layout Hook)   │            │ │
+│  │  │  - Email Gen     │      │  - Sequential    │            │ │
+│  │  │  - History       │      │  - Polling       │            │ │
+│  │  └─────────────────┘      └──────────────────┘            │ │
+│  │           ▲                         ▲                       │ │
+│  │           │                         │                       │ │
+│  │  ┌────────┴────────────┬───────────┴────────┐             │ │
+│  │  │  State Management   │                     │             │ │
+│  │  ├─────────────────────┤                     │             │ │
+│  │  │ Zustand             │  React Query        │             │ │
+│  │  │ - UI State          │  - Email History    │             │ │
+│  │  │ - Queue State       │  - Task Status      │             │ │
+│  │  │ - localStorage      │  - Auto-polling     │             │ │
+│  │  └─────────────────────┴─────────────────────┘             │ │
+│  └─────────────────────────┬───────────────────────────────────┘ │
+│                            │                                      │
+│                            │ JWT Token (Supabase)                 │
+│                            ▼                                      │
+└────────────────────────────┼──────────────────────────────────────┘
+                             │
+                   ┌─────────┴─────────┐
+                   │   API Client      │
+                   │  - Retry Logic    │
+                   │  - Deduplication  │
+                   │  - Error Handling │
+                   └─────────┬─────────┘
+                             │
+          ┌──────────────────┼──────────────────┐
+          │                  │                  │
+          ▼                  ▼                  ▼
+  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+  │   Supabase   │  │   FastAPI    │  │   FastAPI    │
+  │              │  │   Backend    │  │   Backend    │
+  │  - Auth      │  │              │  │              │
+  │  - Database  │  │  POST /api/  │  │  GET /api/   │
+  │  - JWT       │  │  email/      │  │  email/      │
+  │              │  │  generate    │  │  status/{id} │
+  └──────────────┘  └──────┬───────┘  └──────────────┘
+                           │
+                           ▼
+                    ┌─────────────┐
+                    │   Celery    │
+                    │   Worker    │
+                    │             │
+                    │  1. Scrape  │
+                    │  2. AI Gen  │
+                    │  3. Save DB │
+                    └─────────────┘
+```
 
 ## Quick Start
 
-### Basic Usage
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+- Supabase account (for auth)
+- Access to FastAPI backend
 
-```typescript
-import { emailAPI } from '@/lib/api';
+### Environment Setup
 
-// Fetch email history
-const emails = await emailAPI.getEmailHistory(20, 0);
+Create `.env.local` in the project root:
 
-// Generate email
-const { task_id } = await emailAPI.generateEmail({
-  email_template: 'Hi {{name}}...',
-  recipient_name: 'Dr. Jane Smith',
-  recipient_interest: 'machine learning',
-  template_type: 'research'
-});
+```bash
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+
+# API Configuration
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000  # Development
+# NEXT_PUBLIC_API_BASE_URL=https://api.manit.codes  # Production
 ```
 
-### With React Query (Recommended)
+### Installation
 
-```typescript
-import { useQuery } from '@tanstack/react-query';
-import { emailAPI } from '@/lib/api';
-import { queryKeys } from '@/lib/query-keys';
+```bash
+# Install dependencies
+npm install
 
-function EmailHistoryTable() {
-  const { data: emails, isLoading, error } = useQuery({
-    queryKey: queryKeys.emails.listByUser(userId, 20, 0),
-    // Pass signal for automatic cancellation
-    queryFn: ({ signal }) => emailAPI.getEmailHistory(20, 0, { signal })
-  });
+# Generate Supabase types (optional)
+npm run types:generate
 
-  if (isLoading) return <LoadingSpinner />;
-  if (error) return <ErrorMessage error={error} />;
-
-  return <Table data={emails} />;
-}
+# Run development server
+npm run dev
 ```
 
-## API Reference
+Visit `http://localhost:3000`
 
-### Email API
+### Running the Backend
 
-#### `getEmailHistory(limit, offset, options)`
-
-Fetch user's email history with pagination.
-
-**Parameters:**
-- `limit` (number, default: 20) - Number of emails to fetch
-- `offset` (number, default: 0) - Pagination offset
-- `options` (ApiRequestOptions, optional) - Request options
-
-**Returns:** `Promise<EmailResponse[]>`
-
-**Example:**
-```typescript
-// Basic usage
-const emails = await emailAPI.getEmailHistory(20, 0);
-
-// With React Query
-const { data } = useQuery({
-  queryKey: ['emails', limit, offset],
-  queryFn: ({ signal }) => emailAPI.getEmailHistory(limit, offset, { signal })
-});
+```bash
+# See backend repository for setup instructions
+# Development: http://localhost:8000
+# Production: https://api.manit.codes
 ```
 
-#### `generateEmail(emailData, options)`
+## Documentation Index
 
-Start email generation task (async operation).
+### Core Documentation
 
-**Parameters:**
-- `emailData` (EmailGenerationData) - Email generation parameters
-- `options` (ApiRequestOptions, optional) - Request options
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Detailed system architecture, authentication flow, API client design, state management patterns, and best practices
 
-**Returns:** `Promise<GenerateEmailResponse>` with `task_id`
+- **[QUEUE_ARCHITECTURE.md](./QUEUE_ARCHITECTURE.md)** - Deep dive into the client-side queue system, three-hook pattern, sequential processing, polling mechanism, and integration guide
 
-**Example:**
-```typescript
-const mutation = useMutation({
-  mutationFn: (data: EmailGenerationData) => emailAPI.generateEmail(data)
-});
+- **[PATTERNS.md](./PATTERNS.md)** - Established code patterns including session manager, granular selectors, hydration safety, query key factory, and error handling
 
-await mutation.mutateAsync({
-  email_template: 'Hi {{name}}...',
-  recipient_name: 'Dr. Smith',
-  recipient_interest: 'machine learning',
-  template_type: 'research'
-});
+### Historical Documentation
+
+- **[MIGRATION_CLEANUP.md](./MIGRATION_CLEANUP.md)** - Record of queue system migration from complex multi-hook implementation to simplified Zustand + React Query architecture
+
+## Key Concepts
+
+### Client-Side Queue Processing
+
+Unlike traditional server-side queue systems (Bull, BullMQ, Redis), Scribe uses a **client-side queue** implemented with Zustand and React Query. The queue processor runs in the browser within the dashboard layout component, processing email generation tasks sequentially with 2-second polling for status updates.
+
+**Why client-side?**
+- Simplicity - No infrastructure to maintain
+- Cost-effective - No always-on background processes
+- User visibility - Immediate feedback and progress tracking
+- Debugging - Everything visible in browser DevTools
+
+**Trade-offs:**
+- Single-device processing (only active tab processes queue)
+- Interruption on tab close (recovery mechanism handles this)
+- Sequential processing (one at a time)
+
+→ See [QUEUE_ARCHITECTURE.md](./QUEUE_ARCHITECTURE.md) for complete details
+
+### Authentication Flow
+
+1. User clicks "Sign in with Google" on landing page
+2. Supabase handles OAuth redirect
+3. Callback route exchanges code for session
+4. AuthContext initializes user in backend database
+5. Session manager caches JWT token for subsequent API calls
+
+→ See [ARCHITECTURE.md](./ARCHITECTURE.md#authentication-architecture) for details
+
+### State Management Strategy
+
+**Zustand** - Client state (UI forms, queue items)
+- Persisted to localStorage
+- Survives page refreshes
+- Granular selectors for performance
+
+**React Query** - Server state (emails, task status)
+- Automatic caching (3-5 minute retention)
+- Background refetching
+- Polling for async operations
+
+→ See [ARCHITECTURE.md](./ARCHITECTURE.md#state-management-strategy) for patterns
+
+### API Client Architecture
+
+Production-grade HTTP client with:
+- Exponential backoff retry for transient failures
+- Request deduplication (100ms window)
+- Custom error classes for granular handling
+- AbortController integration with React Query
+- Automatic JWT injection via session manager
+
+→ See [ARCHITECTURE.md](./ARCHITECTURE.md#api-client-architecture) for implementation
+
+## Common Tasks
+
+### Adding a New Feature
+
+1. **Plan state requirements**
+   - Client state (UI forms, user input) → Zustand
+   - Server state (API data) → React Query
+
+2. **Create API endpoint wrapper** (if needed)
+   ```typescript
+   // lib/api/index.ts
+   export const myFeatureAPI = {
+     getData: async (options?: ApiRequestOptions) => {
+       return apiClient.requestWithValidation(
+         '/api/my-feature',
+         MyDataSchema,
+         options
+       );
+     }
+   };
+   ```
+
+3. **Add query key** (if needed)
+   ```typescript
+   // lib/query-keys.ts
+   export const queryKeys = {
+     myFeature: {
+       all: ['myFeature'] as const,
+       data: () => [...queryKeys.myFeature.all, 'data'] as const,
+     }
+   };
+   ```
+
+4. **Create React Query hook**
+   ```typescript
+   // hooks/useMyFeature.ts
+   export function useMyFeature() {
+     return useQuery({
+       queryKey: queryKeys.myFeature.data(),
+       queryFn: ({ signal }) => myFeatureAPI.getData({ signal })
+     });
+   }
+   ```
+
+5. **Build UI component** with protected route if needed
+
+### Debugging Queue Issues
+
+1. **Check queue state**
+   ```typescript
+   // In browser console
+   window.__ZUSTAND_STORES__ // View all Zustand stores
+   ```
+
+2. **Inspect React Query cache**
+   ```typescript
+   // Add React Query Devtools
+   import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+   ```
+
+3. **Check task status polling**
+   - Open Network tab in DevTools
+   - Look for `/api/email/status/{task_id}` requests every 2 seconds
+   - Verify task progresses: PENDING → STARTED → SUCCESS
+
+4. **Verify queue processor is running**
+   - Should be initialized in `/app/dashboard/layout.tsx`
+   - Check console for processing logs (dev mode)
+
+### Running Tests
+
+```bash
+# Unit tests
+npm run test
+
+# E2E tests
+npm run test:e2e
+
+# Type checking
+npm run type-check
+
+# Linting
+npm run lint
 ```
 
-#### `getTaskStatus(taskId, options)`
+### Generating Supabase Types
 
-Check email generation task status.
-
-**Parameters:**
-- `taskId` (string) - Celery task ID
-- `options` (ApiRequestOptions, optional) - Request options
-
-**Returns:** `Promise<TaskStatusResponse>`
-
-**Example:**
-```typescript
-// With automatic polling
-const { data: status } = useQuery({
-  queryKey: ['task', taskId],
-  queryFn: ({ signal }) => emailAPI.getTaskStatus(taskId, { signal }),
-  refetchInterval: (query) => {
-    const status = query.state.data?.status;
-    // Stop polling when complete
-    if (status === 'SUCCESS' || status === 'FAILURE') return false;
-    return 3000; // Poll every 3 seconds
-  }
-});
+```bash
+# Auto-generate TypeScript types from Supabase schema
+npm run types:generate
 ```
 
-#### `getEmail(emailId, options)`
+## Development Workflow
 
-Get a specific email by ID.
+### Local Development
 
-**Parameters:**
-- `emailId` (string) - Email UUID
-- `options` (ApiRequestOptions, optional) - Request options
+1. Start backend service (see backend repo)
+2. Run `npm run dev`
+3. Open `http://localhost:3000`
+4. Sign in with Google OAuth
+5. Test email generation flow
 
-**Returns:** `Promise<EmailResponse>`
+### Best Practices
 
-**Example:**
-```typescript
-const { data: email } = useQuery({
-  queryKey: ['email', emailId],
-  queryFn: ({ signal }) => emailAPI.getEmail(emailId, { signal })
-});
-```
+- **Always use session manager** - Never bypass `sessionManager.getToken()`
+- **Use granular selectors** - Don't subscribe to entire Zustand store
+- **Check hydration** - Use `useHasHydrated()` before rendering persisted state
+- **Pass signals to queries** - Enable automatic request cancellation
+- **Use query key factory** - Don't hardcode query keys
+- **Validate with Zod** - Runtime validation for all API responses
 
-### User API
+→ See [PATTERNS.md](./PATTERNS.md) for comprehensive pattern guide
 
-#### `getUserData(options)`
-
-Get current user's profile.
-
-**Parameters:**
-- `options` (ApiRequestOptions, optional) - Request options
-
-**Returns:** `Promise<UserProfile>`
-
-**Example:**
-```typescript
-const { data: profile } = useQuery({
-  queryKey: ['user', 'profile'],
-  queryFn: ({ signal }) => userAPI.getUserData({ signal })
-});
-```
-
-#### `initUser(displayName, options)`
-
-Initialize user profile (idempotent).
-
-**Parameters:**
-- `displayName` (string, optional) - User's display name
-- `options` (ApiRequestOptions, optional) - Request options
-
-**Returns:** `Promise<UserProfile>`
-
-**Example:**
-```typescript
-// After Supabase sign-in
-const profile = await userAPI.initUser('John Doe');
-```
-
-## Request Options
-
-### `ApiRequestOptions`
-
-All API methods accept an optional `options` parameter with the following fields:
-
-```typescript
-interface ApiRequestOptions {
-  // AbortSignal for request cancellation (provided by React Query)
-  signal?: AbortSignal;
-
-  // Request timeout in milliseconds (default: 30000)
-  timeout?: number;
-
-  // Retry configuration (default: false for queries, enabled for mutations)
-  retry?: RetryOptions | false;
-
-  // Skip authentication header (for public endpoints)
-  skipAuth?: boolean;
-
-  // Enable request deduplication (default: true for GET, false for others)
-  deduplicate?: boolean;
-}
-```
-
-### Examples
-
-#### Custom Timeout
-
-```typescript
-// Fast-fail for quick operations
-const email = await emailAPI.getEmail(emailId, { timeout: 5000 });
-
-// Long timeout for heavy operations
-const result = await emailAPI.generateEmail(data, { timeout: 60000 });
-```
-
-#### Custom Retry Configuration
-
-```typescript
-const result = await apiClient.request('/api/endpoint', {
-  retry: {
-    maxAttempts: 5,
-    baseDelay: 1000,
-    maxDelay: 10000,
-    jitter: true,
-    onRetry: (error, attempt, delay) => {
-      console.log(`Retry ${attempt} after ${delay}ms`);
-    }
-  }
-});
-```
-
-#### Disable Deduplication
-
-```typescript
-// Force fresh request even if identical request is in-flight
-const emails = await emailAPI.getEmailHistory(20, 0, { deduplicate: false });
-```
-
-## Error Handling
-
-### Error Types
-
-The API client throws custom error classes for different failure scenarios:
-
-| Error Class | Status | Use Case | Retryable |
-|-------------|--------|----------|-----------|
-| `NetworkError` | 0 | Network connectivity issues | Yes |
-| `TimeoutError` | 0 | Request took too long | Yes |
-| `ServerError` | 500-599 | Backend server errors | Yes |
-| `RateLimitError` | 429 | Too many requests | Yes |
-| `AuthenticationError` | 401, 403 | Invalid/expired token | No |
-| `ValidationError` | 400 | Invalid request data | No |
-| `AbortError` | 0 | Request cancelled by user | No |
-| `ApiError` | Any | Generic API error | Depends |
-
-### Error Handling Patterns
-
-#### Pattern 1: Type-Specific Handling
-
-```typescript
-import {
-  ApiError,
-  NetworkError,
-  ValidationError,
-  AuthenticationError
-} from '@/lib/api';
-
-try {
-  const result = await emailAPI.generateEmail(data);
-} catch (error) {
-  if (error instanceof NetworkError) {
-    toast.error('Connection lost. Please check your internet.');
-  } else if (error instanceof AuthenticationError) {
-    router.push('/login');
-  } else if (error instanceof ValidationError) {
-    setFormErrors(error.validationErrors);
-  } else if (error instanceof ApiError) {
-    toast.error(error.getUserMessage());
-  }
-}
-```
-
-#### Pattern 2: Retryable Errors
-
-```typescript
-try {
-  await emailAPI.generateEmail(data);
-} catch (error) {
-  if (error instanceof ApiError && error.retryable) {
-    setShowRetryButton(true);
-  } else {
-    toast.error(error.getUserMessage());
-  }
-}
-```
-
-#### Pattern 3: React Query Error Handling
-
-```typescript
-const mutation = useMutation({
-  mutationFn: emailAPI.generateEmail,
-  onError: (error) => {
-    if (error instanceof NetworkError) {
-      toast.error('Network error');
-    } else if (error instanceof ApiError) {
-      toast.error(error.getUserMessage());
-    }
-  }
-});
-```
-
-## Request Cancellation
-
-### Automatic Cancellation with React Query
-
-React Query automatically cancels requests when:
-- Component unmounts
-- Query key changes
-- Manual cancellation via `queryClient.cancelQueries()`
-
-**Example:**
-```typescript
-// Automatic cancellation
-const { data } = useQuery({
-  queryKey: ['email', emailId],
-  // signal is automatically provided by React Query
-  queryFn: ({ signal }) => emailAPI.getEmail(emailId, { signal })
-});
-
-// When component unmounts or emailId changes, request is cancelled
-```
-
-### Manual Cancellation
-
-```typescript
-const controller = new AbortController();
-
-// Pass signal manually
-const promise = apiClient.request('/api/endpoint', {
-  signal: controller.signal
-});
-
-// Cancel after 5 seconds
-setTimeout(() => controller.abort(), 5000);
-```
-
-## Retry Logic
-
-### Default Retry Behavior
-
-- **Queries:** Retry disabled at API level (React Query handles query retries)
-- **Mutations:** Retry enabled with 2 attempts (max 1 retry)
-
-### Retry Strategy
-
-**Retryable Errors:**
-- Network errors (offline, connection failed)
-- Timeout errors
-- Server errors (500-599)
-- Rate limit errors (429)
-
-**Non-Retryable Errors:**
-- Authentication errors (401, 403)
-- Validation errors (400)
-- Client errors (400-499 except 429)
-
-### Exponential Backoff
+## Project Structure
 
 ```
-Attempt 1: Immediate
-Attempt 2: ~1000ms delay
-Attempt 3: ~2000ms delay
-Attempt 4: ~4000ms delay
-Attempt 5: ~8000ms delay
+scribe/
+├── app/                    # Next.js App Router
+│   ├── dashboard/          # Protected dashboard routes
+│   │   └── layout.tsx      # Queue processor initialization
+│   ├── auth/               # OAuth callback
+│   └── page.tsx            # Landing page
+├── components/             # React components
+│   ├── ui/                 # shadcn/ui primitives
+│   └── ...                 # Feature components
+├── hooks/                  # Custom React hooks
+│   ├── useQueueManager.ts  # Queue processor
+│   ├── useQueueActions.ts  # Queue actions
+│   ├── useQueueState.ts    # Queue state selectors
+│   └── ...
+├── lib/                    # Core utilities
+│   ├── api/                # API client
+│   ├── auth/               # Session management
+│   ├── schemas.ts          # Zod schemas
+│   └── query-keys.ts       # React Query keys
+├── stores/                 # Zustand state stores
+│   ├── simple-queue-store.ts
+│   └── ui-store.ts
+├── context/                # React Context
+│   └── AuthContextProvider.tsx
+├── types/                  # TypeScript definitions
+│   └── database.types.ts   # Supabase types
+└── docs/                   # Documentation (you are here)
 ```
 
-Each delay includes ±25% random jitter to prevent thundering herd.
+## Contributing
 
-## Request Deduplication
-
-Prevents duplicate concurrent requests during rapid re-renders.
-
-**How it works:**
-1. Request cache with 100ms TTL
-2. If identical request is in-flight, returns existing promise
-3. Auto-cleanup after TTL
-
-**Enabled by default for:**
-- GET requests
-
-**Disabled by default for:**
-- POST, PUT, DELETE, PATCH requests
-
-**Override:**
-```typescript
-// Force fresh request
-const data = await emailAPI.getEmailHistory(20, 0, { deduplicate: false });
-
-// Enable for POST
-const result = await apiClient.request('/api/endpoint', {
-  method: 'POST',
-  deduplicate: true
-});
-```
-
-## Best Practices
-
-### 1. Always Pass Signal to Queries
-
-```typescript
-// ✅ Good
-queryFn: ({ signal }) => emailAPI.getEmail(id, { signal })
-
-// ❌ Bad
-queryFn: () => emailAPI.getEmail(id)
-```
-
-### 2. Let React Query Handle Query Retries
-
-```typescript
-// ✅ Good - React Query retries
-const { data } = useQuery({
-  queryKey: ['email', id],
-  queryFn: ({ signal }) => emailAPI.getEmail(id, { signal }),
-  retry: 3 // React Query handles retry
-});
-
-// ❌ Bad - Double retry (API + React Query)
-queryFn: ({ signal }) => emailAPI.getEmail(id, {
-  signal,
-  retry: { maxAttempts: 3 } // Unnecessary
-})
-```
-
-### 3. Handle Errors Gracefully
-
-```typescript
-// ✅ Good - Type-specific handling
-if (error instanceof ValidationError) {
-  setFormErrors(error.validationErrors);
-} else if (error instanceof ApiError) {
-  toast.error(error.getUserMessage());
-}
-
-// ❌ Bad - Generic error message
-toast.error('Something went wrong');
-```
-
-### 4. Use Custom Timeouts for Critical Operations
-
-```typescript
-// ✅ Good - Fast-fail for quick operations
-const email = await emailAPI.getEmail(id, { timeout: 5000 });
-
-// ❌ Bad - Using default 30s timeout for quick operation
-const email = await emailAPI.getEmail(id);
-```
-
-### 5. Wrap App in ErrorBoundary
-
-```typescript
-// app/dashboard/layout.tsx
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-
-export default function DashboardLayout({ children }) {
-  return (
-    <ErrorBoundary>
-      {children}
-    </ErrorBoundary>
-  );
-}
-```
+1. Follow established patterns documented in [PATTERNS.md](./PATTERNS.md)
+2. Write type-safe code with Zod validation
+3. Add tests for new features
+4. Update documentation for architectural changes
+5. Use conventional commit messages
 
 ## Troubleshooting
 
-### Request Not Cancelled
-
-**Problem:** Request continues after component unmounts
-
-**Solution:** Ensure you're passing signal from React Query
-
-```typescript
-// ✅ Correct
-queryFn: ({ signal }) => emailAPI.getEmail(id, { signal })
-
-// ❌ Missing signal
-queryFn: () => emailAPI.getEmail(id)
-```
-
-### Too Many Retries
-
-**Problem:** Request retries too many times
-
-**Solution:** Disable API-level retry for queries (React Query handles it)
-
-```typescript
-// Mutations only (default behavior)
-const result = await emailAPI.generateEmail(data);
-```
-
-### Stale Data
-
-**Problem:** Data doesn't update after mutation
-
-**Solution:** Invalidate queries after successful mutation
-
-```typescript
-const mutation = useMutation({
-  mutationFn: emailAPI.generateEmail,
-  onSuccess: () => {
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.emails.lists()
-    });
-  }
-});
-```
-
-### Authentication Errors
+### Authentication Issues
 
 **Problem:** Getting 401 errors despite being logged in
 
-**Solution:** Check Supabase session is active
-
+**Solution:** Check Supabase session
 ```typescript
-const { data: { session } } = await supabase.auth.getSession();
-if (!session) {
-  // Redirect to login
-  router.push('/login');
+const { supabaseReady } = useAuth();
+if (!supabaseReady) {
+  // Wait for Supabase to initialize
 }
 ```
 
+### Queue Not Processing
 
-## Architecture
+**Problem:** Queue items stuck in "pending" status
 
-### File Structure
+**Solutions:**
+1. Verify `useQueueManager` is initialized in dashboard layout
+2. Check prerequisites: user authenticated, template provided, Supabase ready
+3. Inspect browser console for errors
+4. Verify backend is running and accessible
 
-```
-lib/api/
-├── client.ts          # Core API client with AbortController
-├── errors.ts          # 8 custom error classes
-├── retry.ts           # Exponential backoff logic
-├── deduplication.ts   # Request cache
-├── types.ts           # TypeScript types
-├── index.ts           # Public exports
-└── README.md          # This file
-```
+### Hydration Errors
 
-### Flow Diagram
+**Problem:** "Text content does not match server-rendered HTML"
 
-```
-Component
-   ↓
-React Query (provides signal)
-   ↓
-API Method (emailAPI.getEmail)
-   ↓
-API Client (handles auth, timeout, retry, dedup)
-   ↓
-Fetch with AbortController
-   ↓
-Backend API
+**Solution:** Use hydration safety pattern
+```typescript
+const hasHydrated = useHasHydrated();
+if (!hasHydrated) return <LoadingSpinner />;
+// Now safe to render persisted state
 ```
 
-## Performance Metrics
+### Performance Issues
 
-### Before Phase 3
+**Problem:** Too many re-renders
 
-- API calls per hour: ~720 (polling every 5s)
-- No request cancellation
-- No retry logic
-- Generic error messages
+**Solution:** Use granular Zustand selectors
+```typescript
+// ✅ Good - Only re-renders when template changes
+const template = useEmailTemplate();
 
-### After Phase 3
-
-- API calls per hour: ~10 (98.6% reduction)
-- Automatic request cancellation
-- Intelligent retry with exponential backoff
-- User-friendly error messages
+// ❌ Bad - Re-renders on any UI store change
+const { emailTemplate } = useUIStore();
+```
 
 ## Support
 
-For issues or questions about the API client:
-- Check this documentation first
-- Review the [IMPROVEMENTS.MD](/IMPROVEMENTS.MD) for architecture details
-- Check browser console for detailed error logs (development mode)
-- Review Network tab in DevTools to debug request/response
+For questions or issues:
+1. Check this documentation first
+2. Review specific documentation files for deep dives
+3. Check browser console and Network tab for debugging
+4. Review code examples in [PATTERNS.md](./PATTERNS.md)
 
 ---
 
-**Phase 3 Implementation Complete** ✅
+**Documentation maintained for Scribe v1.0**
 
-Generated with [Claude Code](https://claude.com/claude-code)
+Last updated: 2025-11-23

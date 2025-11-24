@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useEffect, useState, useRef } from "react";
 import { supabase } from "../config/supabase";
 import { api } from "../lib/api";
-import { sessionManager } from "@/lib/auth/session-manager";
+import { useAuthStore } from "@/stores/auth-store";
 
 interface User {
   uid: string;
@@ -82,6 +82,9 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
     const processSession = async (session: any, event: string) => {
       if (!mounted) return;
 
+      // Sync session to Zustand store immediately
+      useAuthStore.getState().setSession(session);
+
       console.log('╔═══════════════════════════════════════════════════════════╗');
       console.log('║ [Auth] 📋 PROCESSING SESSION                              ║');
       console.log('╚═══════════════════════════════════════════════════════════╝');
@@ -140,14 +143,17 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
             }
           } else {
             console.log('[Auth] ❌ No valid claims or user - clearing user state');
+            useAuthStore.getState().clearSession();
             if (mounted) setUser(null);
           }
         } else {
           console.log('[Auth] ❌ No session/token - clearing user state');
+          useAuthStore.getState().clearSession();
           if (mounted) setUser(null);
         }
       } catch (error) {
         console.error('[Auth] ❌ Error processing session:', error);
+        useAuthStore.getState().clearSession();
         if (mounted) setUser(null);
       } finally {
         // CRITICAL: Always set loading to false after processing
@@ -229,8 +235,8 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   }, []);
 
   const logout = async () => {
-    // Clear session cache before signing out
-    sessionManager.clearCache();
+    // Clear Zustand session store before signing out
+    useAuthStore.getState().clearSession();
     setUser(null);
     await supabase.auth.signOut();
   };

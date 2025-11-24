@@ -10,13 +10,13 @@ import {
   useSetCopiedEmailId,
   useHasHydrated,
 } from "@/stores/ui-store";
+import { useAuthStore } from "@/stores/auth-store";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Check, Shield } from "lucide-react";
 import { QueueStatus } from "@/components/QueueStatus";
-import { supabase } from "@/config/supabase";
 
 export default function DashboardPage() {
   const { user, supabaseReady } = useAuth();
@@ -42,13 +42,13 @@ export default function DashboardPage() {
   // Derived state
   const emailCount = emailHistory.length;
 
-  // Auth check handler
-  const handleAuthCheck = async () => {
+  // Auth check handler - NEW IMPLEMENTATION using Zustand auth store
+  const handleAuthCheck = () => {
     setAuthCheckRunning(true);
     setAuthCheckResult(null);
 
     console.log('╔═══════════════════════════════════════════════════════════╗');
-    console.log('║ [Dashboard] 🔍 AUTH CHECK BUTTON CLICKED                 ║');
+    console.log('║ [Dashboard] 🔍 AUTH CHECK - ZUSTAND STORE METHOD         ║');
     console.log('╚═══════════════════════════════════════════════════════════╝');
     console.log('[Dashboard] 📊 Initial state:', {
       hasUser: !!user,
@@ -59,46 +59,42 @@ export default function DashboardPage() {
     });
 
     try {
-      console.log('[Dashboard] 📡 Calling supabase.auth.getSession()...');
+      console.log('[Dashboard] ⚡ Accessing auth token from Zustand store...');
       const startTime = Date.now();
 
-      // Add timeout to match ApiClient behavior
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          console.log('[Dashboard] ⏱️  Auth check timeout after 5000ms');
-          reject(new Error('Auth check timeout after 5000ms'));
-        }, 5000);
-      });
-
-      const sessionPromise = supabase.auth.getSession();
-
-      const { data, error } = await Promise.race([
-        sessionPromise,
-        timeoutPromise
-      ]) as Awaited<typeof sessionPromise>;
+      const authStore = useAuthStore.getState();
+      const token = authStore.getToken();
+      const isValid = authStore.isSessionValid();
+      const session = authStore.session;
 
       const duration = Date.now() - startTime;
 
-      console.log(`[Dashboard] ✅ getSession() completed in ${duration}ms`);
-      console.log('[Dashboard] 📊 Session result:', {
-        hasSession: !!data?.session,
-        hasToken: !!data?.session?.access_token,
-        tokenLength: data?.session?.access_token?.length || 0,
-        userId: data?.session?.user?.id,
-        userEmail: data?.session?.user?.email,
-        error: error?.message,
+      console.log(`[Dashboard] ⚡ Token access completed in ${duration}ms (INSTANT!)`);
+      console.log('[Dashboard] 📊 Auth store state:', {
+        hasToken: !!token,
+        tokenLength: token?.length || 0,
+        tokenPreview: token ? `${token.substring(0, 20)}...` : 'null',
+        isSessionValid: isValid,
+        hasSession: !!session,
+        userId: session?.user?.id,
+        userEmail: session?.user?.email,
+        expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
         duration: `${duration}ms`
       });
 
-      if (error) {
-        console.error('[Dashboard] ❌ Auth check failed:', error);
-        setAuthCheckResult(`❌ Failed: ${error.message}`);
-      } else if (!data?.session?.access_token) {
-        console.warn('[Dashboard] ⚠️  No auth token found');
-        setAuthCheckResult('⚠️  No auth token found');
+      // Set result based on token retrieval
+      if (!token) {
+        console.warn('[Dashboard] ⚠️  No auth token found in Zustand store');
+        setAuthCheckResult('⚠️  No auth token found in cached store');
+      } else if (!isValid) {
+        console.warn('[Dashboard] ⚠️  Session is invalid or expired');
+        setAuthCheckResult('⚠️  Session invalid or expired');
       } else {
         console.log('[Dashboard] ✅ Auth check successful!');
-        setAuthCheckResult(`✅ Success (${duration}ms) - Token: ${data.session.access_token.substring(0, 20)}...`);
+        setAuthCheckResult(
+          `✅ Token retrieved instantly (${duration}ms)\n` +
+          `Token: ${token.substring(0, 20)}... | Valid: ${isValid}`
+        );
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -215,11 +211,17 @@ export default function DashboardPage() {
                 <CardContent className="space-y-4">
                   <div className="text-sm text-blue-800">
                     <p className="mb-2">
-                      <strong>Purpose:</strong> This button tests the same Supabase auth flow
-                      that the generate button uses. Check the browser console for detailed logs.
+                      <strong>Purpose:</strong> This button demonstrates the NEW Zustand-based auth implementation
+                      with instant synchronous token access. This is the same method used by the API client for all requests.
+                    </p>
+                    <p className="mb-2">
+                      <strong>How it works:</strong> Retrieves cached auth token from Zustand store (no async calls)
                     </p>
                     <p className="mb-4">
                       <strong>Status:</strong> Supabase Ready = {supabaseReady ? '✅ Yes' : '❌ No'}
+                    </p>
+                    <p className="text-xs text-blue-600">
+                      💡 Check browser console for detailed auth store state and logs
                     </p>
                   </div>
                   <Button
