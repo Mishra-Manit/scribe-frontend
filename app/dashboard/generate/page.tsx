@@ -97,7 +97,7 @@ export default function GenerateEmailsPage() {
               <h2 className="text-xl font-semibold text-gray-800 mb-3">How to Format Your Email Template</h2>
               <p className="text-sm text-gray-700 mb-2">
                 Please use double curly braces <code>{'{{}}'}</code> to denote parts of your template that should be personalized for each professor.
-                For example, if you want to insert the professor's name, use <code><strong>{'{{'}professor_name{'}}'}</strong></code>.
+                For example, if you want to insert the professor&apos;s name, use <code><strong>{'{{'}professor_name{'}}'}</strong></code>.
               </p>
               <p className="text-sm text-gray-700 mb-2">
                 Other placeholders you might use could be <code><strong>{'{{'}university_name{'}}'}</strong></code>, <code><strong>{'{{'}research_paper{'}}'}</strong></code>, or <code><strong>{'{{'}research_interest{'}}'}</strong></code>.
@@ -106,7 +106,7 @@ export default function GenerateEmailsPage() {
 
               <h3 className="text-md font-semibold text-gray-800 mt-4 mb-2">Example Section:</h3>
               <div className="text-sm text-gray-700 bg-gray-100 p-3 rounded-md">
-                <p className="mb-2">I have a deep passion for the field of <strong>{'{{'}research_topic{'}}'}</strong> and would love to learn further from you. I read your paper, <strong>&quot;{'{'}recent_paper{'}}'}"</strong> and found it incredibly fascinating; your findings prompted me to read more about <strong>{'{{'}paper_topic{'}}'}</strong>. I would love to gain experience in <strong>{'{{'}research_field{'}}'}</strong> by working under you and would appreciate your expertise as I work to accomplish my goals.</p>
+                <p className="mb-2">I have a deep passion for the field of <strong>{'{{'}research_topic{'}}'}</strong> and would love to learn further from you. I read your paper, <strong>&quot;{'{{'}recent_paper{'}}'}&quot;</strong> and found it incredibly fascinating; your findings prompted me to read more about <strong>{'{{'}paper_topic{'}}'}</strong>. I would love to gain experience in <strong>{'{{'}research_field{'}}'}</strong> by working under you and would appreciate your expertise as I work to accomplish my goals.</p>
               </div>
             </div>
 

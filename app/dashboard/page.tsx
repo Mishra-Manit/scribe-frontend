@@ -15,7 +15,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, Shield } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import { QueueStatus } from "@/components/QueueStatus";
 
 export default function DashboardPage() {
@@ -35,76 +35,8 @@ export default function DashboardPage() {
   const copiedEmailId = useCopiedEmailId();
   const setCopiedEmailId = useSetCopiedEmailId();
 
-  // Auth check state
-  const [authCheckRunning, setAuthCheckRunning] = useState(false);
-  const [authCheckResult, setAuthCheckResult] = useState<string | null>(null);
-
   // Derived state
   const emailCount = emailHistory.length;
-
-  // Auth check handler - NEW IMPLEMENTATION using Zustand auth store
-  const handleAuthCheck = () => {
-    setAuthCheckRunning(true);
-    setAuthCheckResult(null);
-
-    console.log('╔═══════════════════════════════════════════════════════════╗');
-    console.log('║ [Dashboard] 🔍 AUTH CHECK - ZUSTAND STORE METHOD         ║');
-    console.log('╚═══════════════════════════════════════════════════════════╝');
-    console.log('[Dashboard] 📊 Initial state:', {
-      hasUser: !!user,
-      userId: user?.uid,
-      userEmail: user?.email,
-      supabaseReady,
-      timestamp: new Date().toISOString()
-    });
-
-    try {
-      console.log('[Dashboard] ⚡ Accessing auth token from Zustand store...');
-      const startTime = Date.now();
-
-      const authStore = useAuthStore.getState();
-      const token = authStore.getToken();
-      const isValid = authStore.isSessionValid();
-      const session = authStore.session;
-
-      const duration = Date.now() - startTime;
-
-      console.log(`[Dashboard] ⚡ Token access completed in ${duration}ms (INSTANT!)`);
-      console.log('[Dashboard] 📊 Auth store state:', {
-        hasToken: !!token,
-        tokenLength: token?.length || 0,
-        tokenPreview: token ? `${token.substring(0, 20)}...` : 'null',
-        isSessionValid: isValid,
-        hasSession: !!session,
-        userId: session?.user?.id,
-        userEmail: session?.user?.email,
-        expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
-        duration: `${duration}ms`
-      });
-
-      // Set result based on token retrieval
-      if (!token) {
-        console.warn('[Dashboard] ⚠️  No auth token found in Zustand store');
-        setAuthCheckResult('⚠️  No auth token found in cached store');
-      } else if (!isValid) {
-        console.warn('[Dashboard] ⚠️  Session is invalid or expired');
-        setAuthCheckResult('⚠️  Session invalid or expired');
-      } else {
-        console.log('[Dashboard] ✅ Auth check successful!');
-        setAuthCheckResult(
-          `✅ Token retrieved instantly (${duration}ms)\n` +
-          `Token: ${token.substring(0, 20)}... | Valid: ${isValid}`
-        );
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error('[Dashboard] ❌ Auth check exception:', error);
-      setAuthCheckResult(`❌ Exception: ${errorMessage}`);
-    } finally {
-      console.log('╔═══════════════════════════════════════════════════════════╗\n');
-      setAuthCheckRunning(false);
-    }
-  };
 
   // Wait for stores to hydrate before rendering
   if (!uiHydrated) {
