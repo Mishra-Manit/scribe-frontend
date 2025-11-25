@@ -1,5 +1,6 @@
 import { API_BASE_URL } from "@/config/api";
 import { z } from "zod";
+import logger from "@/utils/logger";
 import {
   ApiError,
   NetworkError,
@@ -68,7 +69,7 @@ export class ApiClient {
     const token = useAuthStore.getState().getToken();
 
     if (!token) {
-      console.error('[ApiClient] No valid auth token available');
+      logger.error('[ApiClient] No valid auth token available');
       throw new AuthenticationError('No valid authentication token');
     }
 
@@ -257,7 +258,7 @@ export class ApiClient {
       return schema.parse(data);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        console.error("[API] Validation error:", error.issues);
+        logger.error("[API] Validation error:", error.issues);
         throw new ValidationError(
           `Invalid API response format: ${error.issues
             .map((e) => e.message)

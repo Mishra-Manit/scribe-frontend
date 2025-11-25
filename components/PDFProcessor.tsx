@@ -2,6 +2,7 @@
 
 import { ChangeEvent } from "react";
 import * as pdfjsLib from 'pdfjs-dist';
+import logger from '@/utils/logger';
 
 // Specify the workerSrc for pdfjs-dist
 pdfjsLib.GlobalWorkerOptions.workerSrc = `/pdf.worker.min.mjs`;
@@ -36,7 +37,7 @@ export default function PDFProcessor({ onFileProcessed, onError, onProcessingCha
             onFileProcessed(file, fullText);
           }
         } catch (e) {
-          console.error("Error extracting PDF text:", e);
+          logger.error("Error extracting PDF text:", e);
           onError("Failed to extract text from PDF. Please ensure it\'s a valid PDF file.");
           onFileProcessed(file, "");
         } finally {
@@ -48,7 +49,7 @@ export default function PDFProcessor({ onFileProcessed, onError, onProcessingCha
           const text = await file.text();
           onFileProcessed(file, text);
         } catch (e) {
-          console.error("Error reading text file:", e);
+          logger.error("Error reading text file:", e);
           onError("Failed to read text from file.");
           onFileProcessed(file, "");
         } finally {

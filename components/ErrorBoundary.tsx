@@ -1,7 +1,9 @@
 "use client";
 
+import React from 'react';
 import { Component, type ReactNode } from "react";
 import { ApiError } from "@/lib/api";
+import logger from '@/utils/logger';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
@@ -49,7 +51,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("[ErrorBoundary] Caught error:", error, errorInfo);
+    logger.error("[ErrorBoundary] Caught error:", error, errorInfo);
 
     // Log to error tracking service (e.g., Sentry)
     // Sentry.captureException(error, { contexts: { react: errorInfo } });

@@ -198,8 +198,8 @@ export default function DashboardPage() {
                 <QueueStatus />
               </div>
             </div>
-
-            {/* Auth Check Section */}
+            
+            {/* Auth Check Section
             <div className="px-4 py-6 sm:px-0">
               <Card className="border-2 border-blue-200 bg-blue-50">
                 <CardHeader>
@@ -253,7 +253,7 @@ export default function DashboardPage() {
                   )}
                 </CardContent>
               </Card>
-            </div>
+            </div> */}
 
             {/* Email History Section */}
             <div className="px-4 py-6 sm:px-0">

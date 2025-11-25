@@ -96,17 +96,17 @@ export default function GenerateEmailsPage() {
             <div className="max-w-2xl mx-auto mb-6 p-4 border-2 border-dashed border-gray-300 rounded-lg">
               <h2 className="text-xl font-semibold text-gray-800 mb-3">How to Format Your Email Template</h2>
               <p className="text-sm text-gray-700 mb-2">
-                Please use square brackets <code>[]</code> to denote parts of your template that should be personalized for each professor.
-                For example, if you want to insert the professor&apos;s name, use <code><strong>[Professor&apos;s Name]</strong></code>.
+                Please use double curly braces <code>{'{{}}'}</code> to denote parts of your template that should be personalized for each professor.
+                For example, if you want to insert the professor's name, use <code><strong>{'{{'}professor_name{'}}'}</strong></code>.
               </p>
-              <p className="text-sm text-gray-700">
-                Other placeholders you might use could be <code><strong>[University Name]</strong></code>, <code><strong>[Professor&apos;s Most Recent Research Paper]</strong></code>, etc.
-                Ensure these placeholders are clearly marked so the system can replace them correctly.
+              <p className="text-sm text-gray-700 mb-2">
+                Other placeholders you might use could be <code><strong>{'{{'}university_name{'}}'}</strong></code>, <code><strong>{'{{'}research_paper{'}}'}</strong></code>, or <code><strong>{'{{'}research_interest{'}}'}</strong></code>.
+                Ensure these placeholders are wrapped in double curly braces so the system can replace them correctly.
               </p>
 
               <h3 className="text-md font-semibold text-gray-800 mt-4 mb-2">Example Section:</h3>
               <div className="text-sm text-gray-700 bg-gray-100 p-3 rounded-md">
-                <p className="mb-2">I have a deep passion for the field of <strong>[insert topic of research at Lab]</strong> and would love to learn further from you. I read your paper, <strong>&quot;[insert researcher&apos;s key research paper name],&quot;</strong> and found it incredibly fascinating; your findings prompted me to read more about <strong>[insert research paper&apos;s specific topic in that field]</strong>. I would love to gain experience in <strong>[insert topic of research at Lab]</strong> by working under you and would appreciate your expertise as I work to accomplish my goals. In the future, I aspire to pursue a degree in astrophysics and later down the road, a research career.</p>
+                <p className="mb-2">I have a deep passion for the field of <strong>{'{{'}research_topic{'}}'}</strong> and would love to learn further from you. I read your paper, <strong>&quot;{'{'}recent_paper{'}}'}"</strong> and found it incredibly fascinating; your findings prompted me to read more about <strong>{'{{'}paper_topic{'}}'}</strong>. I would love to gain experience in <strong>{'{{'}research_field{'}}'}</strong> by working under you and would appreciate your expertise as I work to accomplish my goals.</p>
               </div>
             </div>
 

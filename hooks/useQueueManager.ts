@@ -11,6 +11,7 @@ import { useSimpleQueueStore } from "@/stores/simple-queue-store";
 import { useEmailTemplate } from "@/stores/ui-store";
 import { emailService, type TaskStatus } from "@/lib/email-service";
 import { queryKeys } from "@/lib/query-keys";
+import logger from "@/utils/logger";
 
 interface QueueManagerState {
   // Current processing state
@@ -82,30 +83,30 @@ export function useQueueManager(): QueueManagerState {
   const processNextItem = async () => {
     // MUTEX LOCK: If another call is already processing, return immediately
     if (processingLockRef.current) {
-      console.log("[Queue] Processing lock held, skipping duplicate call");
+      logger.log("[Queue] Processing lock held, skipping duplicate call");
       return;
     }
 
     // Double-check processing state
     if (isProcessing || processingRef.current) {
-      console.log("[Queue] Already processing, skipping");
+      logger.log("[Queue] Already processing, skipping");
       return;
     }
 
     // Check prerequisites
     if (!user?.uid || !emailTemplate || !supabaseReady) {
-      console.log("[Queue] Prerequisites not met");
+      logger.log("[Queue] Prerequisites not met");
       return;
     }
 
     // Get next pending item
     const nextItem = getNextPending();
     if (!nextItem) {
-      console.log("[Queue] No pending items");
+      logger.log("[Queue] No pending items");
       return;
     }
 
-    console.log(`[Queue] Starting processing for: ${nextItem.recipientName}`);
+    logger.log(`[Queue] Starting processing for: ${nextItem.recipientName}`);
 
     // Create and acquire lock
     const lockPromise = (async () => {
@@ -124,10 +125,10 @@ export function useQueueManager(): QueueManagerState {
         // Update queue item with task ID
         startProcessing(nextItem.id, response.task_id);
         setCurrentTaskId(response.task_id);
-        console.log(`[Queue] Started task ${response.task_id} for ${nextItem.recipientName}`);
+        logger.log(`[Queue] Started task ${response.task_id} for ${nextItem.recipientName}`);
 
       } catch (error) {
-        console.error("[Queue] Failed to start email generation:", error);
+        logger.error("[Queue] Failed to start email generation:", error);
         failItem(nextItem.id, error instanceof Error ? error.message : "Unknown error");
 
         // Clear processing state
@@ -163,7 +164,7 @@ export function useQueueManager(): QueueManagerState {
     if (!processingItem) return;
 
     if (taskStatus.status === "SUCCESS" && taskStatus.result?.email_id) {
-      console.log(`[Queue] Task ${currentTaskId} completed successfully for ${processingItem.recipientName}`);
+      logger.log(`[Queue] Task ${currentTaskId} completed successfully for ${processingItem.recipientName}`);
 
       // Mark as completed
       completeItem(processingItem.id);
@@ -188,12 +189,12 @@ export function useQueueManager(): QueueManagerState {
       // This prevents the auto-start effect from firing prematurely
       setTimeout(() => {
         processingLockRef.current = null; // Release lock
-        console.log("[Queue] Processing next item after success");
+        logger.log("[Queue] Processing next item after success");
         processNextItem(); // Process next item
       }, 500);
 
     } else if (taskStatus.status === "FAILURE") {
-      console.log(`[Queue] Task ${currentTaskId} failed for ${processingItem.recipientName}: ${taskStatus.error}`);
+      logger.log(`[Queue] Task ${currentTaskId} failed for ${processingItem.recipientName}: ${taskStatus.error}`);
 
       // Mark as failed
       failItem(processingItem.id, taskStatus.error || "Task failed");
@@ -212,7 +213,7 @@ export function useQueueManager(): QueueManagerState {
       // CRITICAL: Same pattern for failures
       setTimeout(() => {
         processingLockRef.current = null; // Release lock
-        console.log("[Queue] Processing next item after failure");
+        logger.log("[Queue] Processing next item after failure");
         processNextItem();
       }, 1000);
     }
@@ -223,13 +224,13 @@ export function useQueueManager(): QueueManagerState {
     const processingItem = getProcessingItem();
     if (processingItem && processingItem.taskId) {
       // Resume polling for existing task
-      console.log(`[Queue] Resuming task ${processingItem.taskId} on mount`);
+      logger.log(`[Queue] Resuming task ${processingItem.taskId} on mount`);
       setCurrentTaskId(processingItem.taskId);
       setProcessing(processingItem.id);
       processingRef.current = true;
     } else if (processingItem) {
       // No task ID means it was interrupted - reset to pending
-      console.log("[Queue] Found interrupted processing item, resetting");
+      logger.log("[Queue] Found interrupted processing item, resetting");
       failItem(processingItem.id, "Process was interrupted");
       setProcessing(null);
       processingRef.current = false;
@@ -240,7 +241,7 @@ export function useQueueManager(): QueueManagerState {
   // The mutex lock in processNextItem prevents duplicate calls
   useEffect(() => {
     if (user?.uid && emailTemplate && supabaseReady && pendingCount > 0 && !isProcessing) {
-      console.log("[Queue] Prerequisites met, starting processing");
+      logger.log("[Queue] Prerequisites met, starting processing");
       setTimeout(() => processNextItem(), 100);
     }
   }, [user?.uid, emailTemplate, supabaseReady, pendingCount, isProcessing]); 
@@ -253,7 +254,7 @@ export function useQueueManager(): QueueManagerState {
     completedCount,
     failedCount,
     addToQueue: (items: Array<{name: string; interest: string}>) => {
-      console.log(`[Queue] Adding ${items.length} items to queue`);
+      logger.log(`[Queue] Adding ${items.length} items to queue`);
       addItems(items);
       // Trigger processing after items are added
       setTimeout(() => processNextItem(), 100);
