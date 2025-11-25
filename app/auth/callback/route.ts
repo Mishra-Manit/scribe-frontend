@@ -1,6 +1,7 @@
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient } from '@supabase/ssr';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { cookies } from 'next/headers';
 
 // OAuth callback handler for Supabase authentication
 export async function GET(request: NextRequest) {
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code');
   const error = requestUrl.searchParams.get('error');
   const errorDescription = requestUrl.searchParams.get('error_description');
-  
+
   // Use NEXT_PUBLIC_SITE_URL if available, otherwise fallback to request origin
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin;
   const baseUrl = siteUrl.endsWith('/') ? siteUrl.slice(0, -1) : siteUrl;
@@ -23,16 +24,24 @@ export async function GET(request: NextRequest) {
 
   // Exchange code for session
   if (code) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+    const cookieStore = await cookies();
 
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-      },
-    });
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          },
+        },
+      }
+    );
 
     // Exchange the code for a session
     const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
@@ -40,7 +49,7 @@ export async function GET(request: NextRequest) {
     if (exchangeError) {
       console.error('Error exchanging code for session:', exchangeError);
       return NextResponse.redirect(
-        `${requestUrl.origin}/?error=${encodeURIComponent('auth_failed')}`
+        `${baseUrl}/?error=${encodeURIComponent('auth_failed')}`
       );
     }
 

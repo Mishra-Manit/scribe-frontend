@@ -40,7 +40,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
     let mounted = true;
 
     // Verify Supabase is ready by testing getSession() works without timeout
-    // This ensures the client is fully initialized and can handle concurrent calls
+    // This ensures cookies are available and middleware has set up session
     const verifySupabaseReady = async (): Promise<boolean> => {
       console.log('[Auth] 🔍 VERIFYING SUPABASE READY STATE...');
       const verifyStart = Date.now();
@@ -82,7 +82,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
     const processSession = async (session: any, event: string) => {
       if (!mounted) return;
 
-      // Sync session to Zustand store immediately
+      // Sync session from cookies to Zustand store immediately
       useAuthStore.getState().setSession(session);
 
       console.log('╔═══════════════════════════════════════════════════════════╗');
