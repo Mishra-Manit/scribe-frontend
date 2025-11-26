@@ -14,9 +14,10 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Download, Loader2 } from "lucide-react";
 import { QueueStatus } from "@/components/QueueStatus";
 import { getAuthToken } from "@/lib/api/client";
+import { useEmailExport } from "@/hooks/useEmailExport";
 
 export default function DashboardPage() {
   const { user, loading, supabaseReady } = useAuth();
@@ -42,6 +43,9 @@ export default function DashboardPage() {
   const {
     data: emailHistory = [],
   } = useEmailHistory();
+
+  // Email export functionality
+  const { isExporting, progress, error, exportEmails } = useEmailExport();
 
   // UI state from Zustand
   const hoveredEmailId = useHoveredEmailId();
@@ -203,7 +207,36 @@ export default function DashboardPage() {
 
             {/* Email History Section */}
             <div className="px-4 py-6 sm:px-0">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Email History</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold text-gray-900">Email History</h2>
+                <Button
+                  onClick={exportEmails}
+                  disabled={isExporting || emailHistory.length === 0}
+                  variant="outline"
+                  size="sm"
+                  className="text-gray-900 hover:text-gray-900"
+                >
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Exporting... ({progress.fetched})
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Export
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {/* Error display */}
+              {error && (
+                <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-800 rounded-md text-sm">
+                  {error}
+                </div>
+              )}
+
               <Card>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
