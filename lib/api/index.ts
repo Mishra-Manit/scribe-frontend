@@ -17,7 +17,6 @@ import {
   TaskStatusResponseSchema,
   EmailResponseSchema,
   UserProfileSchema,
-  TemplateGenerationRequestSchema,
   TemplateResponseSchema,
   TemplateListSchema,
   UserProfileWithCountSchema,

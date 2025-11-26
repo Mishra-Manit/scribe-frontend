@@ -200,8 +200,6 @@ export const storageService = {
    */
   async resumeExists(userId: string): Promise<boolean> {
     try {
-      const filePath = `${userId}/resume.pdf`;
-
       const { data, error } = await supabase.storage
         .from(BUCKET_NAME)
         .list(userId);
