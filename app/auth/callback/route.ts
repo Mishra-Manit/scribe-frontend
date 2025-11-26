@@ -53,6 +53,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Verify session is actually set before redirecting
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      console.error('[OAuth Callback] Session not found after exchange');
+      return NextResponse.redirect(
+        `${baseUrl}/?error=${encodeURIComponent('session_not_found')}`
+      );
+    }
+
+    console.log('[OAuth Callback] ✅ Session established for user:', sessionData.session.user.id);
+
     // Successfully authenticated - redirect to dashboard
     return NextResponse.redirect(`${baseUrl}/dashboard`);
   }

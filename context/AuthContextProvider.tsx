@@ -114,20 +114,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
           });
 
           if (!claimsError && claims && session?.user) {
-            // Only initialize user on the FIRST actual sign-in event, not on page reloads
-            const isActualSignIn = event === 'SIGNED_IN' && !hasInitializedRef.current;
-
-            if (isActualSignIn) {
-              try {
-                console.log('[Auth] 🔄 Initializing user in backend database...');
-                await api.user.initUser();
-                console.log('[Auth] ✅ User initialized in backend database');
-              } catch (error) {
-                console.error('[Auth] ⚠️  User initialization failed (might already exist):', error);
-                // Continue anyway - endpoint is idempotent
-              }
-            }
-
+            // SET USER IMMEDIATELY - don't wait for backend
             if (mounted) {
               console.log('[Auth] ✅ Setting user state:', {
                 uid: session.user.id,
@@ -140,6 +127,20 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
                 displayName: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
                 claims: claims,
               });
+            }
+
+            // BACKGROUND: Initialize user in backend (fire-and-forget)
+            // Only initialize user on the FIRST actual sign-in event, not on page reloads
+            const isActualSignIn = event === 'SIGNED_IN' && !hasInitializedRef.current;
+            if (isActualSignIn) {
+              api.user.initUser()
+                .then(() => {
+                  console.log('[Auth] ✅ User initialized in backend (background)');
+                })
+                .catch((error) => {
+                  console.error('[Auth] ⚠️  Background user initialization failed:', error);
+                  // Non-critical - user can still use the app
+                });
             }
           } else {
             console.log('[Auth] ❌ No valid claims or user - clearing user state');
@@ -193,18 +194,21 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
       }
     };
 
-    // SAFEGUARD: Force loading to false after 10 seconds
+    // SAFEGUARD: Force loading to false after 20 seconds
     const timeoutId = setTimeout(() => {
       if (mounted) {
-        console.warn('[Auth] Loading timeout - forcing loading state to false');
-        console.log('[Auth] Timeout check - hasInitialized:', hasInitializedRef.current);
+        console.error('[Auth] CRITICAL: Auth timeout after 20 seconds', {
+          hasInitialized: hasInitializedRef.current,
+          hasUser: !!user,
+          supabaseReady
+        });
         setLoading(false);
         if (!hasInitializedRef.current) {
-          console.warn('[Auth] Timeout triggered before initialization - clearing user');
+          console.error('[Auth] CRITICAL: Clearing user due to timeout - this indicates infrastructure issues');
           setUser(null);
         }
       }
-    }, 10000);
+    }, 20000);
 
     // Listen for auth state changes
     // Note: onAuthStateChange will automatically trigger with the current session when initialized
