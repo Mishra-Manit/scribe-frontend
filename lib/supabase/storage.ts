@@ -73,7 +73,24 @@ export const storageService = {
     try {
       // Verify we have an authenticated session
       console.log("[Storage] Checking authentication...");
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+      // SAFEGUARD: Wrap getSession() in a timeout so we never hang indefinitely
+      const getSessionWithTimeout = async () => {
+        const timeoutMs = 5000;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            console.error("[Storage] getSession() timeout after", timeoutMs, "ms");
+            reject(new Error("getSession timeout"));
+          }, timeoutMs);
+        });
+
+        return Promise.race([
+          supabase.auth.getSession(),
+          timeoutPromise,
+        ]) as unknown as Awaited<ReturnType<typeof supabase.auth.getSession>>;
+      };
+
+      const { data: { session }, error: sessionError } = await getSessionWithTimeout();
       
       if (sessionError) {
         console.error("[Storage] Session error:", sessionError);
