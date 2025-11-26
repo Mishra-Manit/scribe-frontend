@@ -3,30 +3,23 @@ import { emailAPI } from "@/lib/api";
 import { EmailResponse } from "@/lib/schemas";
 import { convertEmailsToCSV, downloadCSV } from "@/lib/csv-utils";
 
-interface ExportProgress {
-  fetched: number;
-}
-
 interface UseEmailExportReturn {
   isExporting: boolean;
-  progress: ExportProgress;
   error: string | null;
   exportEmails: () => Promise<void>;
 }
 
 /**
  * Hook for exporting all emails as CSV
- * Handles pagination, progress tracking, and error handling
+ * Handles pagination and error handling
  */
 export function useEmailExport(): UseEmailExportReturn {
   const [isExporting, setIsExporting] = useState(false);
-  const [progress, setProgress] = useState<ExportProgress>({ fetched: 0 });
   const [error, setError] = useState<string | null>(null);
 
   const exportEmails = async () => {
     setIsExporting(true);
     setError(null);
-    setProgress({ fetched: 0 });
 
     try {
       const allEmails: EmailResponse[] = [];
@@ -68,7 +61,6 @@ export function useEmailExport(): UseEmailExportReturn {
         }
 
         allEmails.push(...batch);
-        setProgress({ fetched: allEmails.length });
         offset += BATCH_SIZE;
 
         // Check if we've reached the end (batch returned less than requested)
@@ -96,5 +88,5 @@ export function useEmailExport(): UseEmailExportReturn {
     }
   };
 
-  return { isExporting, progress, error, exportEmails };
+  return { isExporting, error, exportEmails };
 }

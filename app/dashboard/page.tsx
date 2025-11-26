@@ -45,7 +45,7 @@ export default function DashboardPage() {
   } = useEmailHistory();
 
   // Email export functionality
-  const { isExporting, progress, error, exportEmails } = useEmailExport();
+  const { isExporting, error, exportEmails } = useEmailExport();
 
   // UI state from Zustand
   const hoveredEmailId = useHoveredEmailId();
@@ -219,7 +219,7 @@ export default function DashboardPage() {
                   {isExporting ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Exporting... ({progress.fetched})
+                      Exporting...
                     </>
                   ) : (
                     <>
