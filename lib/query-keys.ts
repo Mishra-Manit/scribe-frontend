@@ -59,6 +59,19 @@ export const queryKeys = {
     status: (taskId: string) =>
       [...queryKeys.tasks.all, 'status', taskId] as const,
   },
+
+  // Template domain keys
+  templates: {
+    // Base key for all template queries
+    all: ['templates'] as const,
+
+    // Template list for current user
+    list: () => [...queryKeys.templates.all, 'list'] as const,
+
+    // Individual template detail
+    detail: (templateId: string) =>
+      [...queryKeys.templates.all, 'detail', templateId] as const,
+  },
 } as const;
 
 // Type helper for query key inference

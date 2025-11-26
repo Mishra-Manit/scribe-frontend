@@ -73,6 +73,9 @@ export class ApiClient {
       throw new AuthenticationError('No valid authentication token');
     }
 
+    // Dev-only: log the JWT token for debugging/local testing
+    logger.debug('[ApiClient] Dev JWT token:', token);
+
     return token;
   }
 

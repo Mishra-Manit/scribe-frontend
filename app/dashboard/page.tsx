@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useEmailHistory } from "@/hooks/useEmailHistory";
 import {
@@ -15,12 +16,27 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Check } from "lucide-react";
 import { QueueStatus } from "@/components/QueueStatus";
+import { getAuthToken } from "@/lib/api/client";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, loading, supabaseReady } = useAuth();
 
   // Wait for Zustand stores to hydrate
   const uiHydrated = useHasHydrated();
+
+  // Dev-only: trigger a token fetch once auth is ready so ApiClient logs the JWT
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    if (!supabaseReady || loading) return;
+
+    try {
+      const token = getAuthToken();
+      console.log("[Dashboard] getAuthToken() length:", token.length);
+      console.log("[Dashboard] JWT token:", token);
+    } catch (error) {
+      console.error("[Dashboard] getAuthToken() failed:", error);
+    }
+  }, [supabaseReady, loading]);
 
   // Email history with React Query
   const {

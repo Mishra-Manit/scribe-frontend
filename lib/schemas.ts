@@ -85,3 +85,39 @@ export const UserProfileSchema = z.object({
   created_at: z.string().datetime(),
 });
 export type UserProfile = z.infer<typeof UserProfileSchema>;
+
+/**
+ * Template generation request schema - POST /api/templates/
+ */
+export const TemplateGenerationRequestSchema = z.object({
+  pdf_url: z.string().url("Must be a valid URL"),
+  user_instructions: z.string().min(10, "Instructions must be at least 10 characters"),
+});
+export type TemplateGenerationRequest = z.infer<typeof TemplateGenerationRequestSchema>;
+
+/**
+ * Template response schema - POST /api/templates/ and GET /api/templates/{id}
+ */
+export const TemplateResponseSchema = z.object({
+  id: z.string().uuid(),
+  user_id: z.string().uuid(),
+  pdf_url: z.string(),
+  template_text: z.string(),
+  user_instructions: z.string(),
+  created_at: z.string().datetime(),
+});
+export type TemplateResponse = z.infer<typeof TemplateResponseSchema>;
+
+/**
+ * Template list schema - GET /api/templates/
+ */
+export const TemplateListSchema = z.array(TemplateResponseSchema);
+export type TemplateList = z.infer<typeof TemplateListSchema>;
+
+/**
+ * Extended user profile with template_count - GET /api/user/profile
+ */
+export const UserProfileWithCountSchema = UserProfileSchema.extend({
+  template_count: z.number().int().nonnegative(),
+});
+export type UserProfileWithCount = z.infer<typeof UserProfileWithCountSchema>;

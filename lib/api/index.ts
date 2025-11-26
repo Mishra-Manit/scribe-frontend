@@ -17,12 +17,20 @@ import {
   TaskStatusResponseSchema,
   EmailResponseSchema,
   UserProfileSchema,
+  TemplateGenerationRequestSchema,
+  TemplateResponseSchema,
+  TemplateListSchema,
+  UserProfileWithCountSchema,
   type EmailGenerationData,
   type GenerateEmailResponse,
   type TaskStatusResponse,
   type EmailResponse,
   type TaskStatus,
   type UserProfile,
+  type TemplateGenerationRequest,
+  type TemplateResponse,
+  type TemplateList,
+  type UserProfileWithCount,
 } from "../schemas";
 
 // Re-export error classes for error handling in components
@@ -240,6 +248,136 @@ export const emailAPI = {
 };
 
 /**
+ * Template API
+ *
+ * Handles template generation, listing, and deletion
+ */
+export const templateAPI = {
+  /**
+   * Generate template from resume PDF (SYNCHRONOUS - waits 5-15 seconds)
+   *
+   * This is a synchronous operation similar to /api/user/init.
+   * The backend will process the PDF and return the template in one request.
+   *
+   * @param pdfUrl - Public URL of resume PDF from Supabase Storage
+   * @param userInstructions - User's specific instructions for template generation
+   * @param options - Request options
+   * @returns Generated template data
+   *
+   * @throws {RateLimitError} When user has reached 5 template limit (429)
+   * @throws {ValidationError} For invalid PDF URL or instructions (400)
+   * @throws {AuthenticationError} For auth issues (401/403)
+   *
+   * @example
+   * // With React Mutation
+   * const mutation = useMutation({
+   *   mutationFn: ({ pdfUrl, instructions }: { pdfUrl: string; instructions: string }) =>
+   *     templateAPI.generateTemplate(pdfUrl, instructions),
+   *   onError: (error) => {
+   *     if (error instanceof RateLimitError) {
+   *       toast.error('Template limit reached. Maximum 5 templates allowed.');
+   *     }
+   *   }
+   * });
+   */
+  generateTemplate: async (
+    pdfUrl: string,
+    userInstructions: string,
+    options?: ApiRequestOptions
+  ): Promise<TemplateResponse> => {
+    return apiClient.requestWithValidation(
+      "/api/templates/",
+      TemplateResponseSchema,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          pdf_url: pdfUrl,
+          user_instructions: userInstructions,
+        }),
+        // Long timeout for 5-15 second generation
+        timeout: 30000, // 30 seconds (buffer for network latency)
+        // Retry disabled for template generation (avoid duplicate templates)
+        retry: false,
+        ...options,
+      }
+    );
+  },
+
+  /**
+   * Get user's template list
+   *
+   * @param options - Request options
+   * @returns Array of user's templates (max 5)
+   *
+   * @example
+   * // With React Query
+   * useQuery({
+   *   queryKey: ['templates'],
+   *   queryFn: ({ signal }) => templateAPI.getTemplates({ signal })
+   * })
+   */
+  getTemplates: async (
+    options?: ApiRequestOptions
+  ): Promise<TemplateList> => {
+    return apiClient.requestWithValidation(
+      "/api/templates/",
+      TemplateListSchema,
+      options
+    );
+  },
+
+  /**
+   * Get single template by ID
+   *
+   * @param templateId - Template UUID
+   * @param options - Request options
+   * @returns Template details
+   *
+   * @example
+   * // With React Query
+   * useQuery({
+   *   queryKey: ['template', templateId],
+   *   queryFn: ({ signal }) => templateAPI.getTemplate(templateId, { signal })
+   * })
+   */
+  getTemplate: async (
+    templateId: string,
+    options?: ApiRequestOptions
+  ): Promise<TemplateResponse> => {
+    return apiClient.requestWithValidation(
+      `/api/templates/${templateId}`,
+      TemplateResponseSchema,
+      options
+    );
+  },
+
+  /**
+   * Get user profile with template_count
+   *
+   * Replaces userAPI.getUserData() for template page to get template count.
+   *
+   * @param options - Request options
+   * @returns User profile with template_count field
+   *
+   * @example
+   * // With React Query
+   * useQuery({
+   *   queryKey: ['user', 'profile'],
+   *   queryFn: ({ signal }) => templateAPI.getUserProfile({ signal })
+   * })
+   */
+  getUserProfile: async (
+    options?: ApiRequestOptions
+  ): Promise<UserProfileWithCount> => {
+    return apiClient.requestWithValidation(
+      "/api/user/profile",
+      UserProfileWithCountSchema,
+      options
+    );
+  },
+};
+
+/**
  * Unified API export
  *
  * Provides clean interface for all API operations.
@@ -253,6 +391,7 @@ export const emailAPI = {
 export const api = {
   user: userAPI,
   email: emailAPI,
+  template: templateAPI,
   client: apiClient, // Expose client for advanced usage
 };
 
@@ -264,4 +403,8 @@ export type {
   EmailResponse,
   TaskStatus,
   UserProfile,
+  TemplateGenerationRequest,
+  TemplateResponse,
+  TemplateList,
+  UserProfileWithCount,
 };
