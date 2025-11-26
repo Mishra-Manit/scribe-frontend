@@ -35,6 +35,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   
   // Use ref to track initialization state so timeout can check current value
   const hasInitializedRef = useRef(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -184,6 +185,13 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
           }
 
           hasInitializedRef.current = true;
+
+          // Clear timeout since initialization succeeded
+          if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+          }
+
           console.log('[Auth] ✅ Session processing complete:', {
             hasInitialized: hasInitializedRef.current,
             loading: false,
@@ -195,7 +203,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
     };
 
     // SAFEGUARD: Force loading to false after 20 seconds
-    const timeoutId = setTimeout(() => {
+    timeoutRef.current = setTimeout(() => {
       if (mounted) {
         console.error('[Auth] CRITICAL: Auth timeout after 20 seconds', {
           hasInitialized: hasInitializedRef.current,
@@ -233,7 +241,9 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
 
     return () => {
       mounted = false;
-      clearTimeout(timeoutId);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
       subscription.unsubscribe();
     };
   }, []);
