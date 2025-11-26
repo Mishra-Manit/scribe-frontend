@@ -77,17 +77,26 @@ export const storageService = {
       // SAFEGUARD: Wrap getSession() in a timeout so we never hang indefinitely
       const getSessionWithTimeout = async () => {
         const timeoutMs = 5000;
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => {
-            console.error("[Storage] getSession() timeout after", timeoutMs, "ms");
-            reject(new Error("getSession timeout"));
-          }, timeoutMs);
-        });
 
-        return Promise.race([
-          supabase.auth.getSession(),
-          timeoutPromise,
-        ]) as unknown as Awaited<ReturnType<typeof supabase.auth.getSession>>;
+        return new Promise<Awaited<ReturnType<typeof supabase.auth.getSession>>>(
+          (resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+              console.error("[Storage] getSession() timeout after", timeoutMs, "ms");
+              reject(new Error("getSession timeout"));
+            }, timeoutMs);
+
+            supabase.auth
+              .getSession()
+              .then((result) => {
+                clearTimeout(timeoutId);
+                resolve(result as Awaited<ReturnType<typeof supabase.auth.getSession>>);
+              })
+              .catch((error) => {
+                clearTimeout(timeoutId);
+                reject(error);
+              });
+          }
+        );
       };
 
       const { data: { session }, error: sessionError } = await getSessionWithTimeout();
