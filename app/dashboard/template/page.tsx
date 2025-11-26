@@ -292,15 +292,6 @@ export default function TemplateGenerationPage() {
                             {template.user_instructions}
                           </p>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="bg-gray-50 p-4 rounded-md">
-                        <p className="text-sm text-gray-800 whitespace-pre-wrap">
-                          {template.template_text}
-                        </p>
-                      </div>
-                      <div className="mt-4 flex justify-end">
                         <Button
                           variant="outline"
                           size="sm"
@@ -310,6 +301,13 @@ export default function TemplateGenerationPage() {
                         >
                           Copy Template
                         </Button>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-gray-50 p-4 rounded-md">
+                        <p className="text-sm text-gray-800 whitespace-pre-wrap">
+                          {template.template_text}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
