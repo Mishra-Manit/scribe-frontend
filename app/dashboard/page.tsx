@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useEmailHistory } from "@/hooks/useEmailHistory";
 import {
@@ -10,7 +9,6 @@ import {
   useSetCopiedEmailId,
   useHasHydrated,
 } from "@/stores/ui-store";
-import { useAuthStore } from "@/stores/auth-store";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +17,7 @@ import { Copy, Check } from "lucide-react";
 import { QueueStatus } from "@/components/QueueStatus";
 
 export default function DashboardPage() {
-  const { user, supabaseReady } = useAuth();
+  const { user } = useAuth();
 
   // Wait for Zustand stores to hydrate
   const uiHydrated = useHasHydrated();
