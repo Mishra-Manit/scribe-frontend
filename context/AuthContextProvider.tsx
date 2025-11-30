@@ -229,12 +229,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
           return;
         }
 
-        // Skip if we're still processing the initial session
-        if (!hasInitializedRef.current && event === 'SIGNED_IN') {
-          console.log('[Auth] ⏭️  Skipping duplicate SIGNED_IN event during initialization');
-          return;
-        }
-
+        // Process all auth events
         await processSession(session, event);
       }
     );
