@@ -1,6 +1,7 @@
 'use client';
 
 import { useQueueManager } from '@/hooks/useQueueManager';
+import { UserInitError } from '@/components/UserInitError';
 
 /**
  * Dashboard Layout Component
@@ -16,5 +17,10 @@ export default function DashboardLayout({
   // Initialize queue manager once for all dashboard pages
   useQueueManager();
 
-  return <>{children}</>;
+  return (
+    <>
+      <UserInitError />
+      {children}
+    </>
+  );
 }

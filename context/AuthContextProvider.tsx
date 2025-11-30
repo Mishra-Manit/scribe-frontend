@@ -15,7 +15,9 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   supabaseReady: boolean;
+  userInitError: string | null;
   logout: () => Promise<void>;
+  retryUserInit: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -32,6 +34,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [supabaseReady, setSupabaseReady] = useState(false)
+  const [userInitError, setUserInitError] = useState<string | null>(null)
   
   // Use ref to track initialization state so timeout can check current value
   const hasInitializedRef = useRef(false);
@@ -153,19 +156,26 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
               });
             }
 
-            // BACKGROUND: Initialize user in backend (fire-and-forget)
-            // Only initialize user on the FIRST actual sign-in event, not on page reloads
-            const isActualSignIn = event === 'SIGNED_IN' && !hasInitializedRef.current;
-            if (isActualSignIn) {
-              api.user.initUser()
-                .then(() => {
-                  console.log('[Auth] ✅ User initialized in backend (background)');
-                })
-                .catch((error) => {
-                  console.error('[Auth] ⚠️  Background user initialization failed:', error);
-                  // Non-critical - user can still use the app
-                });
-            }
+            // CRITICAL: Initialize user in backend database
+            // This creates the user record in the database if it doesn't exist
+            // Must be called for EVERY new user, regardless of auth event type
+            api.user.initUser(session.user.user_metadata?.full_name)
+              .then(() => {
+                console.log('[Auth] ✅ User verified/initialized in backend database');
+                if (mounted) {
+                  setUserInitError(null); // Clear any previous errors
+                }
+              })
+              .catch((error) => {
+                console.error('[Auth] ❌ Failed to initialize user in database:', error);
+                // Set error state so UI can show appropriate message
+                if (mounted) {
+                  const errorMessage = error.status === 401 || error.status === 403
+                    ? 'Failed to initialize your account. Please try logging out and back in.'
+                    : error.message || 'Failed to initialize user account';
+                  setUserInitError(errorMessage);
+                }
+              });
           } else {
             console.log('[Auth] ❌ No valid claims or user - clearing user state');
             useAuthStore.getState().clearSession();
@@ -266,15 +276,36 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
     };
   }, []);
 
+  // Retry user initialization (for error recovery)
+  const retryUserInit = async () => {
+    if (!user) return;
+    
+    console.log('[Auth] 🔄 Retrying user initialization...');
+    setUserInitError(null);
+    
+    try {
+      const displayName = user.displayName || user.email?.split('@')[0];
+      await api.user.initUser(displayName);
+      console.log('[Auth] ✅ User initialization retry successful');
+    } catch (error: any) {
+      console.error('[Auth] ❌ User initialization retry failed:', error);
+      const errorMessage = error.status === 401 || error.status === 403
+        ? 'Failed to initialize your account. Please try logging out and back in.'
+        : error.message || 'Failed to initialize user account';
+      setUserInitError(errorMessage);
+    }
+  };
+
   const logout = async () => {
     // Clear Zustand session store before signing out
     useAuthStore.getState().clearSession();
-    setUser(null);
     await supabase.auth.signOut();
+    setUser(null);
+    setUserInitError(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, supabaseReady, logout }}>
+    <AuthContext.Provider value={{ user, loading, supabaseReady, userInitError, logout, retryUserInit }}>
       {children}
     </AuthContext.Provider>
   );
