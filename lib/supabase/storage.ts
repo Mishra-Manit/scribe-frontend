@@ -42,8 +42,8 @@ export const storageService = {
   /**
    * Upload resume PDF to Supabase Storage
    *
-   * Path pattern: {user_id}/resume.pdf
-   * Single resume per user (uploading new overwrites old)
+   * Path pattern: {user_id}/{timestamp}_resume.pdf
+   * Each upload creates a new file with unique timestamp
    *
    * @param file - PDF file to upload
    * @param userId - User ID for path
@@ -123,7 +123,8 @@ export const storageService = {
         tokenLength: session.access_token?.length
       });
 
-      const filePath = `${userId}/resume.pdf`;
+      const timestamp = Date.now();
+      const filePath = `${userId}/${timestamp}_resume.pdf`;
 
       console.log(`[Storage] Uploading resume to ${filePath}`, {
         fileSize: file.size,
@@ -131,12 +132,12 @@ export const storageService = {
         fileName: file.name
       });
 
-      // Upload with upsert to overwrite existing file
+      // Upload with unique timestamp (no overwrite)
       const { data, error } = await supabase.storage
         .from(BUCKET_NAME)
         .upload(filePath, file, {
           cacheControl: "3600",
-          upsert: true, // Overwrite if exists
+          upsert: false, // Each upload is unique
         });
 
       if (error) {

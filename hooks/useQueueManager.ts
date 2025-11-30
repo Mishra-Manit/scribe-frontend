@@ -174,6 +174,11 @@ export function useQueueManager(): QueueManagerState {
         queryKey: ['emails', user?.uid]
       });
 
+      // Invalidate user profile to update generation_count
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.user.profile()
+      });
+
       // Remove from queue after delay
       setTimeout(() => {
         removeItem(processingItem.id);

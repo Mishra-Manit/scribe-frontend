@@ -17,39 +17,36 @@ export function QueueStatus() {
     failedCount,
   } = useQueueState();
   
-  // Determine status message
-  const getStatusMessage = () => {
+  // Determine status details
+  const getStatusDetails = () => {
     if (isProcessing && currentTaskStatus) {
       const step = currentTaskStatus.result?.current_step;
       return {
-        title: "Generating Email",
-        subtitle: step ? `Step: ${step.replace(/_/g, ' ')}` : "Processing...",
+        subtitle: step ? step.replace(/_/g, ' ') : "Processing...",
         color: "text-blue-600",
       };
     }
-    
+
     if (pendingCount > 0) {
       return {
-        title: "Queue Active",
-        subtitle: `${pendingCount} email${pendingCount > 1 ? 's' : ''} waiting`,
+        subtitle: "In queue",
         color: "text-yellow-600",
       };
     }
-    
+
     return {
-      title: "Queue Empty",
-      subtitle: "Ready to generate emails",
-      color: "text-green-600",
+      subtitle: "No emails queued",
+      color: "text-gray-500",
     };
   };
-  
-  const status = getStatusMessage();
-  
+
+  const { subtitle, color } = getStatusDetails();
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium">
-          Queue Status
+          Emails in Queue
         </CardTitle>
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -65,16 +62,16 @@ export function QueueStatus() {
         </svg>
       </CardHeader>
       <CardContent>
-        <div className={`text-2xl font-bold ${status.color}`}>
-          {status.title}
+        <div className={`text-2xl font-bold ${color}`}>
+          {pendingCount}
         </div>
         <p className="text-xs text-muted-foreground">
-          {status.subtitle}
+          {subtitle}
         </p>
         {(completedCount > 0 || failedCount > 0) && (
           <div className="mt-2 text-xs text-gray-500">
-            {completedCount > 0 && <span className="mr-3">✓ {completedCount} completed</span>}
-            {failedCount > 0 && <span>✗ {failedCount} failed</span>}
+            {completedCount > 0 && <span className="mr-3">✓ {completedCount}</span>}
+            {failedCount > 0 && <span>✗ {failedCount}</span>}
           </div>
         )}
       </CardContent>

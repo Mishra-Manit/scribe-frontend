@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useEmailHistory } from "@/hooks/useEmailHistory";
+import { useInfiniteEmailHistory } from "@/hooks/useInfiniteEmailHistory";
+import { api } from "@/lib/api";
+import { queryKeys } from "@/lib/query-keys";
 import {
   useHoveredEmailId,
   useSetHoveredEmailId,
@@ -14,7 +17,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, Download, Loader2 } from "lucide-react";
+import { Copy, Check, Download, Loader2, ChevronDown } from "lucide-react";
 import { QueueStatus } from "@/components/QueueStatus";
 import { getAuthToken } from "@/lib/api/client";
 import { useEmailExport } from "@/hooks/useEmailExport";
@@ -39,10 +42,24 @@ export default function DashboardPage() {
     }
   }, [supabaseReady, loading]);
 
-  // Email history with React Query
+  // Email history with React Query infinite pagination
   const {
-    data: emailHistory = [],
-  } = useEmailHistory();
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteEmailHistory();
+
+  // Flatten all pages into a single array
+  const emailHistory = data?.pages.flatMap(page => page) ?? [];
+
+  // Fetch user profile for generation_count
+  const { data: userProfile } = useQuery({
+    queryKey: queryKeys.user.profile(),
+    queryFn: ({ signal }) => api.template.getUserProfile({ signal }),
+    enabled: !!user?.uid && supabaseReady,
+    staleTime: 30000,
+  });
 
   // Email export functionality
   const { isExporting, error, exportEmails } = useEmailExport();
@@ -54,7 +71,7 @@ export default function DashboardPage() {
   const setCopiedEmailId = useSetCopiedEmailId();
 
   // Derived state
-  const emailCount = emailHistory.length;
+  const totalEmailsGenerated = userProfile?.generation_count ?? 0;
 
   // Wait for stores to hydrate before rendering
   if (!uiHydrated) {
@@ -110,7 +127,7 @@ export default function DashboardPage() {
                     </svg>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{emailCount}</div>
+                    <div className="text-2xl font-bold">{totalEmailsGenerated}</div>
                     <p className="text-xs text-muted-foreground">
                       Lifetime total
                     </p>
@@ -324,6 +341,43 @@ export default function DashboardPage() {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* Load More Button */}
+                  {hasNextPage && (
+                    <div className="p-6 border-t border-gray-200 flex justify-center">
+                      <Button
+                        onClick={() => fetchNextPage()}
+                        disabled={isFetchingNextPage}
+                        variant="outline"
+                        size="lg"
+                        className="group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg"
+                      >
+                        <span className={`flex items-center gap-2 transition-all duration-300 ${
+                          isFetchingNextPage ? 'opacity-0' : 'opacity-100'
+                        }`}>
+                          Load More Emails
+                          <ChevronDown className="h-4 w-4 animate-bounce" />
+                        </span>
+
+                        {isFetchingNextPage && (
+                          <span className="absolute inset-0 flex items-center justify-center">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            <span className="ml-2">Loading...</span>
+                          </span>
+                        )}
+
+                        {/* Animated background gradient on hover */}
+                        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* End of emails indicator */}
+                  {!hasNextPage && emailHistory.length > 0 && (
+                    <div className="p-4 text-center text-sm text-gray-500 border-t border-gray-200">
+                      All emails loaded
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
