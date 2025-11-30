@@ -13,7 +13,7 @@ import { EmailHistory } from "@/lib/schemas";
 const EMAILS_PER_PAGE = 100;
 
 export function useInfiniteEmailHistory() {
-  const { user } = useAuth();
+  const { user, loading, userInitError } = useAuth();
 
   return useInfiniteQuery<EmailHistory>({
     queryKey: ['emails-infinite', user?.uid],
@@ -28,7 +28,7 @@ export function useInfiniteEmailHistory() {
       // Calculate the next offset
       return allPages.length * EMAILS_PER_PAGE;
     },
-    enabled: !!user?.uid,
+    enabled: !!user?.uid && !loading && !userInitError,
     initialPageParam: 0,
     staleTime: 30 * 1000, // Consider data fresh for 30 seconds
     refetchOnWindowFocus: true,
