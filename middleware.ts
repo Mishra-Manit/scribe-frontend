@@ -37,7 +37,13 @@ export async function middleware(request: NextRequest) {
   );
 
   // CRITICAL: This triggers token refresh
-  await supabase.auth.getClaims();
+  // Use getSession() instead of getClaims() - it's the recommended method for SSR
+  try {
+    await supabase.auth.getSession();
+  } catch (error) {
+    // Log error but don't block the request
+    console.error('[Middleware] Session refresh failed:', error);
+  }
 
   return supabaseResponse;
 }
