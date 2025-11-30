@@ -105,13 +105,36 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
           // Verify JWT locally using getClaims() - no server API call
           console.log('[Auth] 🔑 Getting claims from JWT...');
           const claimsStart = Date.now();
-          const { data: claims, error: claimsError } = await supabase.auth.getClaims();
+          
+          // Add timeout protection for getClaims
+          const claimsTimeout = new Promise<never>((_, reject) => {
+            setTimeout(() => {
+              console.log('[Auth] ⏱️  getClaims timeout after 5000ms');
+              reject(new Error('getClaims timeout'));
+            }, 5000);
+          });
+          
+          let claims: Record<string, unknown> | null;
+          let claimsError: Error | unknown | null;
+          try {
+            const result = await Promise.race([
+              supabase.auth.getClaims(),
+              claimsTimeout
+            ]) as Awaited<ReturnType<typeof supabase.auth.getClaims>>;
+            claims = result.data;
+            claimsError = result.error;
+          } catch (timeoutError) {
+            console.error('[Auth] ❌ getClaims timed out:', timeoutError);
+            claimsError = timeoutError;
+            claims = null;
+          }
+          
           const claimsDuration = Date.now() - claimsStart;
 
           console.log(`[Auth] 📝 Claims result (${claimsDuration}ms):`, {
             hasError: !!claimsError,
             hasClaims: !!claims,
-            error: claimsError?.message
+            error: claimsError instanceof Error ? claimsError.message : String(claimsError)
           });
 
           if (!claimsError && claims && session?.user) {
