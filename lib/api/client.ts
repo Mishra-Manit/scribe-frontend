@@ -1,6 +1,6 @@
 import { API_BASE_URL } from "@/config/api";
 import { z } from "zod";
-import logger from "@/utils/logger";
+import { createLogger } from "@/utils/logger";
 import {
   ApiError,
   NetworkError,
@@ -14,6 +14,9 @@ import { withRetry, fetchWithTimeout } from "./retry";
 import { RequestCache } from "./deduplication";
 import type { ApiRequestOptions } from "./types";
 import { useAuthStore } from "@/stores/auth-store";
+import { AUTH_ERRORS, API_ERRORS } from "@/constants/error-messages";
+
+const logger = createLogger('ApiClient');
 
 /**
  * Modern API client with production-grade enhancements
@@ -69,14 +72,27 @@ export class ApiClient {
     const token = useAuthStore.getState().getToken();
 
     if (!token) {
-      logger.error('[ApiClient] No valid auth token available');
-      throw new AuthenticationError('No valid authentication token');
+      logger.error(AUTH_ERRORS.NO_TOKEN.dev);
+      throw new AuthenticationError(AUTH_ERRORS.NO_TOKEN.dev);
     }
 
-    // Dev-only: log the JWT token for debugging/local testing
-    logger.debug('[ApiClient] Dev JWT token:', token);
+    // Dev-only: log token prefix for debugging
+    logger.debug('Auth token retrieved', {
+      tokenPrefix: token.substring(0, 20) + '...'
+    });
 
     return token;
+  }
+
+  /**
+   * Get request ID from global window object (set by middleware response header)
+   */
+  private getRequestId(): string | undefined {
+    if (typeof window !== 'undefined') {
+      // Check if request ID was stored from previous response
+      return window.__REQUEST_ID__;
+    }
+    return undefined;
   }
 
   // Build request headers with authentication (SYNCHRONOUS)
@@ -92,6 +108,12 @@ export class ApiClient {
     if (!options.skipAuth) {
       const token = this.getAuthToken();
       headers.set("Authorization", `Bearer ${token}`);
+    }
+
+    // Propagate request ID for distributed tracing (if available)
+    const requestId = this.getRequestId();
+    if (requestId) {
+      headers.set('X-Request-ID', requestId);
     }
 
     return headers;
@@ -120,7 +142,7 @@ export class ApiClient {
     if (response.status === 401 || response.status === 403) {
       const errorData = await response.json().catch(() => ({}));
       throw new AuthenticationError(
-        errorData.message || errorData.detail || "Authentication failed",
+        errorData.message || errorData.detail || AUTH_ERRORS.TOKEN_INVALID.dev,
         response.status
       );
     }
@@ -129,7 +151,7 @@ export class ApiClient {
     if (response.status === 400) {
       const errorData = await response.json().catch(() => ({}));
       throw new ValidationError(
-        errorData.message || errorData.detail || "Validation failed"
+        errorData.message || errorData.detail || API_ERRORS.VALIDATION.dev
       );
     }
 
@@ -139,7 +161,7 @@ export class ApiClient {
       throw new ServerError(
         errorData.message ||
           errorData.detail ||
-          `Server error: ${response.statusText}`,
+          `${API_ERRORS.SERVER_ERROR.dev}: ${response.statusText}`,
         response.status
       );
     }
@@ -150,7 +172,7 @@ export class ApiClient {
       throw new ApiError(
         errorData.message ||
           errorData.detail ||
-          `Request failed: ${response.statusText}`,
+          `${API_ERRORS.UNKNOWN.dev}: ${response.statusText}`,
         response.status
       );
     }
@@ -195,13 +217,11 @@ export class ApiClient {
       } catch (error) {
         // Convert native errors to our custom error types
         if (error instanceof TypeError && error.message.includes("fetch")) {
-          throw new NetworkError(
-            "Network request failed. Please check your connection."
-          );
+          throw new NetworkError(API_ERRORS.NETWORK.dev);
         }
 
         if (error instanceof Error && error.name === "AbortError") {
-          throw new AbortError("Request was cancelled");
+          throw new AbortError(API_ERRORS.REQUEST_CANCELLED.dev);
         }
 
         // Re-throw if already our error type
@@ -211,7 +231,7 @@ export class ApiClient {
 
         // Unknown error
         throw new ApiError(
-          error instanceof Error ? error.message : "Unknown error occurred",
+          error instanceof Error ? error.message : API_ERRORS.UNKNOWN.dev,
           0
         );
       }
@@ -261,9 +281,15 @@ export class ApiClient {
       return schema.parse(data);
     } catch (error) {
       if (error instanceof z.ZodError) {
-        logger.error("[API] Validation error:", error.issues);
+        logger.error(API_ERRORS.VALIDATION_RESPONSE.dev, {
+          endpoint,
+          issues: error.issues.map(i => ({
+            path: i.path,
+            message: i.message
+          }))
+        });
         throw new ValidationError(
-          `Invalid API response format: ${error.issues
+          `${API_ERRORS.VALIDATION_RESPONSE.dev}: ${error.issues
             .map((e) => e.message)
             .join(", ")}`,
           error.issues

@@ -3,6 +3,11 @@ import React, { createContext, useContext, useEffect, useState, useRef } from "r
 import { supabase } from "../config/supabase";
 import { api } from "../lib/api";
 import { useAuthStore } from "@/stores/auth-store";
+import { createLogger } from "@/utils/logger";
+import { AUTH_ERRORS } from "@/constants/error-messages";
+import { toastService } from "@/lib/toast-service";
+
+const logger = createLogger('AuthContext');
 
 interface User {
   uid: string;
@@ -43,45 +48,6 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   useEffect(() => {
     let mounted = true;
 
-    // Verify Supabase is ready by testing getSession() works without timeout
-    // This ensures cookies are available and middleware has set up session
-    const verifySupabaseReady = async (): Promise<boolean> => {
-      console.log('[Auth] 🔍 VERIFYING SUPABASE READY STATE...');
-      const verifyStart = Date.now();
-
-      try {
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => {
-            console.log('[Auth] ⏱️  Verification timeout triggered after 2000ms');
-            reject(new Error('Verification timeout'));
-          }, 2000);
-        });
-
-        console.log('[Auth] 📡 Calling supabase.auth.getSession() for verification...');
-        const { data, error } = await Promise.race([
-          supabase.auth.getSession(),
-          timeoutPromise
-        ]) as Awaited<ReturnType<typeof supabase.auth.getSession>>;
-
-        const verifyDuration = Date.now() - verifyStart;
-
-        if (error) {
-          console.warn(`[Auth] ❌ Supabase verification failed (${verifyDuration}ms):`, error);
-          return false;
-        }
-
-        console.log(`[Auth] ✅ Supabase client verified ready (${verifyDuration}ms)`, {
-          hasSession: !!data.session,
-          hasToken: !!data.session?.access_token
-        });
-        return true;
-      } catch (error) {
-        const verifyDuration = Date.now() - verifyStart;
-        console.warn(`[Auth] ❌ Supabase verification error (${verifyDuration}ms):`, error);
-        return false;
-      }
-    };
-
     // Process session - unified function for both initial check and auth state changes
     const processSession = async (session: any, event: string) => {
       if (!mounted) return;
@@ -89,176 +55,99 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
       // Sync session from cookies to Zustand store immediately
       useAuthStore.getState().setSession(session);
 
-      console.log('╔═══════════════════════════════════════════════════════════╗');
-      console.log('║ [Auth] 📋 PROCESSING SESSION                              ║');
-      console.log('╚═══════════════════════════════════════════════════════════╝');
-      console.log('[Auth] 🎯 Event:', event);
-      console.log('[Auth] 📊 Session state:', {
+      logger.info('Processing session', {
+        event,
         hasSession: !!session,
-        hasToken: !!session?.access_token,
-        tokenLength: session?.access_token?.length || 0,
         userId: session?.user?.id,
-        userEmail: session?.user?.email,
-        hasInitialized: hasInitializedRef.current,
-        timestamp: new Date().toISOString()
+        userEmail: session?.user?.email
       });
 
       try {
-        if (session?.access_token) {
-          // Verify JWT locally using getClaims() - no server API call
-          console.log('[Auth] 🔑 Getting claims from JWT...');
-          const claimsStart = Date.now();
-          
-          // Add timeout protection for getClaims
-          const claimsTimeout = new Promise<never>((_, reject) => {
-            setTimeout(() => {
-              console.log('[Auth] ⏱️  getClaims timeout after 5000ms');
-              reject(new Error('getClaims timeout'));
-            }, 5000);
+        if (session?.user) {
+          // Extract user data directly from session (no getClaims needed)
+          const userData = {
+            uid: session.user.id,
+            email: session.user.email,
+            displayName: session.user.user_metadata?.full_name ||
+                         session.user.email?.split('@')[0] ||
+                         'User',
+            claims: session.user.user_metadata || {},
+          };
+
+          logger.info('User authenticated', {
+            uid: userData.uid,
+            email: userData.email
           });
-          
-          let claims: Record<string, unknown> | null;
-          let claimsError: Error | unknown | null;
-          try {
-            const result = await Promise.race([
-              supabase.auth.getClaims(),
-              claimsTimeout
-            ]) as Awaited<ReturnType<typeof supabase.auth.getClaims>>;
-            claims = result.data;
-            claimsError = result.error;
-          } catch (timeoutError) {
-            console.error('[Auth] ❌ getClaims timed out:', timeoutError);
-            claimsError = timeoutError;
-            claims = null;
+
+          if (mounted) {
+            setUser(userData);
           }
-          
-          const claimsDuration = Date.now() - claimsStart;
 
-          console.log(`[Auth] 📝 Claims result (${claimsDuration}ms):`, {
-            hasError: !!claimsError,
-            hasClaims: !!claims,
-            error: claimsError instanceof Error ? claimsError.message : String(claimsError)
-          });
+          // BLOCKING: Initialize user in backend database
+          try {
+            logger.info('Initializing user in backend database', { userId: userData.uid });
+            await api.user.initUser(userData.displayName);
+            logger.info('User initialized in backend database', { userId: userData.uid });
 
-          if (!claimsError && claims && session?.user) {
-            // SET USER IMMEDIATELY - don't wait for backend
             if (mounted) {
-              console.log('[Auth] ✅ Setting user state:', {
-                uid: session.user.id,
-                email: session.user.email,
-                displayName: session.user.user_metadata?.full_name || session.user.email?.split('@')[0]
-              });
-              setUser({
-                uid: session.user.id,
-                email: session.user.email,
-                displayName: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-                claims: claims,
-              });
+              setUserInitError(null);
             }
+          } catch (error: any) {
+            logger.error(AUTH_ERRORS.USER_INIT_FAILED.dev, {
+              userId: userData.uid,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            });
 
-            // CRITICAL: Initialize user in backend database
-            // This creates the user record in the database if it doesn't exist
-            // Must be called for EVERY new user, regardless of auth event type
-            api.user.initUser(session.user.user_metadata?.full_name)
-              .then(() => {
-                console.log('[Auth] ✅ User verified/initialized in backend database');
-                if (mounted) {
-                  setUserInitError(null); // Clear any previous errors
-                }
-              })
-              .catch((error) => {
-                console.error('[Auth] ❌ Failed to initialize user in database:', error);
-                // Set error state so UI can show appropriate message
-                if (mounted) {
-                  const errorMessage = error.status === 401 || error.status === 403
-                    ? 'Failed to initialize your account. Please try logging out and back in.'
-                    : error.message || 'Failed to initialize user account';
-                  setUserInitError(errorMessage);
-                }
-              });
-          } else {
-            console.log('[Auth] ❌ No valid claims or user - clearing user state');
-            useAuthStore.getState().clearSession();
-            if (mounted) setUser(null);
+            if (mounted) {
+              const errorMessage = error.status === 401 || error.status === 403
+                ? AUTH_ERRORS.USER_INIT_FORBIDDEN.user
+                : error.message || AUTH_ERRORS.USER_INIT_FAILED.user;
+              setUserInitError(errorMessage);
+              toastService.errorMessage(errorMessage);
+            }
           }
         } else {
-          console.log('[Auth] ❌ No session/token - clearing user state');
+          logger.info('No session - clearing user state');
           useAuthStore.getState().clearSession();
-          if (mounted) setUser(null);
+          if (mounted) {
+            setUser(null);
+            setUserInitError(null);
+          }
         }
       } catch (error) {
-        console.error('[Auth] ❌ Error processing session:', error);
+        logger.error(AUTH_ERRORS.SESSION_PROCESSING_ERROR.dev, {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
         useAuthStore.getState().clearSession();
-        if (mounted) setUser(null);
-      } finally {
-        // CRITICAL: Always set loading to false after processing
         if (mounted) {
-          console.log('[Auth] 🏁 Finalizing session processing...');
+          setUser(null);
+          setUserInitError(null);
+        }
+      } finally {
+        // Set loading to false AFTER all processing complete
+        if (mounted) {
+          logger.debug('Session processing complete');
           setLoading(false);
-
-          // Verify Supabase is ready after first session processing
-          if (!hasInitializedRef.current) {
-            console.log('[Auth] 🔍 First initialization - verifying Supabase ready...');
-            const isReady = await verifySupabaseReady();
-            setSupabaseReady(isReady);
-
-            // If not ready on first attempt, retry after 500ms delay
-            if (!isReady) {
-              console.log('[Auth] ⚠️  Not ready - scheduling retry in 500ms...');
-              setTimeout(async () => {
-                if (mounted) {
-                  const retryReady = await verifySupabaseReady();
-                  setSupabaseReady(retryReady);
-                  if (!retryReady) {
-                    console.error('[Auth] ❌ Supabase failed to initialize after retry');
-                  }
-                }
-              }, 500);
-            }
-          }
-
+          setSupabaseReady(true); // Always ready after session processed
           hasInitializedRef.current = true;
 
-          // Clear timeout since initialization succeeded
+          // Clear any timeouts
           if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
             timeoutRef.current = null;
           }
-
-          console.log('[Auth] ✅ Session processing complete:', {
-            hasInitialized: hasInitializedRef.current,
-            loading: false,
-            supabaseReady
-          });
-          console.log('╔═══════════════════════════════════════════════════════════╗\n');
         }
       }
     };
 
-    // SAFEGUARD: Force loading to false after 20 seconds
-    timeoutRef.current = setTimeout(() => {
-      if (mounted) {
-        console.error('[Auth] CRITICAL: Auth timeout after 20 seconds', {
-          hasInitialized: hasInitializedRef.current,
-          hasUser: !!user,
-          supabaseReady
-        });
-        setLoading(false);
-        if (!hasInitializedRef.current) {
-          console.error('[Auth] CRITICAL: Clearing user due to timeout - this indicates infrastructure issues');
-          setUser(null);
-        }
-      }
-    }, 20000);
-
     // Listen for auth state changes
     // Note: onAuthStateChange will automatically trigger with the current session when initialized
-    console.log('[Auth] 🚀 AuthContextProvider initializing - setting up auth listener...');
+    logger.info('Auth context initializing');
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log(`[Auth] 🔔 Auth state change event received: ${event}`);
+        logger.debug('Auth state change', { event });
         if (!mounted) {
-          console.log('[Auth] ⚠️  Component unmounted - ignoring event');
+          logger.debug('Component unmounted - ignoring event');
           return;
         }
 
@@ -279,20 +168,24 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
   // Retry user initialization (for error recovery)
   const retryUserInit = async () => {
     if (!user) return;
-    
-    console.log('[Auth] 🔄 Retrying user initialization...');
+
+    logger.info('Retrying user initialization', { userId: user.uid });
     setUserInitError(null);
-    
+
     try {
       const displayName = user.displayName || user.email?.split('@')[0];
       await api.user.initUser(displayName);
-      console.log('[Auth] ✅ User initialization retry successful');
+      logger.info('User initialization retry successful', { userId: user.uid });
     } catch (error: any) {
-      console.error('[Auth] ❌ User initialization retry failed:', error);
+      logger.error('User initialization retry failed', {
+        userId: user.uid,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
       const errorMessage = error.status === 401 || error.status === 403
-        ? 'Failed to initialize your account. Please try logging out and back in.'
-        : error.message || 'Failed to initialize user account';
+        ? AUTH_ERRORS.USER_INIT_FORBIDDEN.user
+        : error.message || AUTH_ERRORS.USER_INIT_FAILED.user;
       setUserInitError(errorMessage);
+      toastService.errorMessage(errorMessage);
     }
   };
 

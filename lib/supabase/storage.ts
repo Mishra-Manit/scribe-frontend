@@ -4,6 +4,7 @@
  */
 
 import { supabase } from "@/config/supabase";
+import { STORAGE_ERRORS } from "@/constants/error-messages";
 
 const BUCKET_NAME = "resumes";
 
@@ -20,21 +21,24 @@ export class StorageError extends Error {
 
   getUserMessage(): string {
     if (this.code === "BUCKET_NOT_FOUND") {
-      return "Storage bucket not configured. Please contact support.";
+      return STORAGE_ERRORS.BUCKET_NOT_FOUND.user;
     }
     if (this.code === "FILE_TOO_LARGE") {
-      return "File is too large. Maximum size is 10MB.";
+      return STORAGE_ERRORS.FILE_TOO_LARGE.user;
     }
     if (this.code === "INVALID_FILE_TYPE") {
-      return "Invalid file type. Please upload a PDF file.";
+      return STORAGE_ERRORS.INVALID_FILE_TYPE.user;
     }
-    if (this.code === "AUTH_ERROR" || this.code === "NO_SESSION") {
-      return "Authentication issue. Please try logging out and back in.";
+    if (this.code === "AUTH_ERROR") {
+      return STORAGE_ERRORS.AUTH_ERROR.user;
+    }
+    if (this.code === "NO_SESSION") {
+      return STORAGE_ERRORS.NO_SESSION.user;
     }
     if (this.message?.includes("row-level security") || this.status === 403) {
-      return "Storage permissions not configured. Please contact support with error code: RLS_POLICY";
+      return STORAGE_ERRORS.RLS_POLICY_ERROR.user;
     }
-    return this.message || "Failed to upload file. Please try again.";
+    return this.message || STORAGE_ERRORS.UPLOAD_FAILED.user;
   }
 }
 
@@ -52,12 +56,12 @@ export const storageService = {
   async uploadResume(file: File, userId: string): Promise<string> {
     // Validation
     if (!file) {
-      throw new StorageError("No file provided", "NO_FILE");
+      throw new StorageError(STORAGE_ERRORS.NO_FILE.dev, "NO_FILE");
     }
 
     if (file.type !== "application/pdf") {
       throw new StorageError(
-        "Only PDF files are supported",
+        STORAGE_ERRORS.INVALID_FILE_TYPE.dev,
         "INVALID_FILE_TYPE"
       );
     }
@@ -65,7 +69,7 @@ export const storageService = {
     const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
     if (file.size > MAX_FILE_SIZE) {
       throw new StorageError(
-        "File size exceeds 10MB limit",
+        STORAGE_ERRORS.FILE_TOO_LARGE.dev,
         "FILE_TOO_LARGE"
       );
     }
@@ -104,7 +108,7 @@ export const storageService = {
       if (sessionError) {
         console.error("[Storage] Session error:", sessionError);
         throw new StorageError(
-          "Authentication error. Please try logging out and back in.",
+          STORAGE_ERRORS.AUTH_ERROR.dev,
           "AUTH_ERROR"
         );
       }
@@ -112,7 +116,7 @@ export const storageService = {
       if (!session) {
         console.error("[Storage] No active session found");
         throw new StorageError(
-          "Not authenticated. Please log in again.",
+          STORAGE_ERRORS.NO_SESSION.dev,
           "NO_SESSION"
         );
       }
@@ -167,7 +171,7 @@ export const storageService = {
 
       if (!urlData?.publicUrl) {
         throw new StorageError(
-          "Failed to get public URL",
+          STORAGE_ERRORS.NO_PUBLIC_URL.dev,
           "NO_PUBLIC_URL"
         );
       }
@@ -181,7 +185,7 @@ export const storageService = {
 
       console.error("[Storage] Unexpected error:", error);
       throw new StorageError(
-        error instanceof Error ? error.message : "Unknown storage error",
+        error instanceof Error ? error.message : STORAGE_ERRORS.UNKNOWN_ERROR.dev,
         "UNKNOWN_ERROR"
       );
     }
@@ -202,7 +206,10 @@ export const storageService = {
 
       if (error) {
         console.error("[Storage] Delete failed:", error);
-        throw new StorageError(error.message, error.name);
+        throw new StorageError(
+          error.message || STORAGE_ERRORS.DELETE_FAILED.dev,
+          error.name
+        );
       }
 
       console.log("[Storage] Resume deleted:", filePath);
@@ -213,7 +220,7 @@ export const storageService = {
 
       console.error("[Storage] Unexpected delete error:", error);
       throw new StorageError(
-        error instanceof Error ? error.message : "Unknown storage error",
+        error instanceof Error ? error.message : STORAGE_ERRORS.UNKNOWN_ERROR.dev,
         "UNKNOWN_ERROR"
       );
     }

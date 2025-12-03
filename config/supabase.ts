@@ -15,10 +15,23 @@ if (!supabaseUrl || !supabasePublishableKey) {
 /**
  * Browser Supabase Client
  *
- * Now uses cookie-based session storage via @supabase/ssr.
- * Middleware handles automatic token refresh.
+ * Uses createBrowserClient from @supabase/ssr for cookie-based sessions.
+ * Token refresh is handled automatically by Supabase client (default behavior).
+ * Auth state persisted in Zustand with localStorage for instant restoration.
+ *
+ * Configuration:
+ * - autoRefreshToken: Automatically refreshes tokens ~5 minutes before expiry
+ * - persistSession: Persists session in HTTP-only cookies
+ * - detectSessionInUrl: Enables OAuth callback handling
  */
 export const supabase = createBrowserClient(
   supabaseUrl,
-  supabasePublishableKey
+  supabasePublishableKey,
+  {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true
+    }
+  }
 );

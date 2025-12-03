@@ -12,6 +12,8 @@ import { useEmailTemplate } from "@/stores/ui-store";
 import { emailService, type TaskStatus } from "@/lib/email-service";
 import { queryKeys } from "@/lib/query-keys";
 import logger from "@/utils/logger";
+import { QUEUE_ERRORS } from "@/constants/error-messages";
+import { toastService } from "@/lib/toast-service";
 
 interface QueueManagerState {
   // Current processing state
@@ -83,30 +85,30 @@ export function useQueueManager(): QueueManagerState {
   const processNextItem = async () => {
     // MUTEX LOCK: If another call is already processing, return immediately
     if (processingLockRef.current) {
-      logger.log("[Queue] Processing lock held, skipping duplicate call");
+      logger.debug("[Queue] Processing lock held, skipping duplicate call");
       return;
     }
 
     // Double-check processing state
     if (isProcessing || processingRef.current) {
-      logger.log("[Queue] Already processing, skipping");
+      logger.debug("[Queue] Already processing, skipping");
       return;
     }
 
     // Check prerequisites
     if (!user?.uid || !emailTemplate || !supabaseReady) {
-      logger.log("[Queue] Prerequisites not met");
+      logger.debug("[Queue] Prerequisites not met");
       return;
     }
 
     // Get next pending item
     const nextItem = getNextPending();
     if (!nextItem) {
-      logger.log("[Queue] No pending items");
+      logger.debug("[Queue] No pending items");
       return;
     }
 
-    logger.log(`[Queue] Starting processing for: ${nextItem.recipientName}`);
+    logger.info(`[Queue] Starting processing for: ${nextItem.recipientName}`);
 
     // Create and acquire lock
     const lockPromise = (async () => {
@@ -125,11 +127,14 @@ export function useQueueManager(): QueueManagerState {
         // Update queue item with task ID
         startProcessing(nextItem.id, response.task_id);
         setCurrentTaskId(response.task_id);
-        logger.log(`[Queue] Started task ${response.task_id} for ${nextItem.recipientName}`);
+        logger.info(`[Queue] Started task ${response.task_id} for ${nextItem.recipientName}`);
 
       } catch (error) {
-        logger.error("[Queue] Failed to start email generation:", error);
-        failItem(nextItem.id, error instanceof Error ? error.message : "Unknown error");
+        logger.error(QUEUE_ERRORS.GENERATION_START_FAILED.dev, {
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+        failItem(nextItem.id, error instanceof Error ? error.message : QUEUE_ERRORS.UNKNOWN_ERROR.dev);
+        toastService.error(QUEUE_ERRORS.GENERATION_FAILED);
 
         // Clear processing state
         setProcessing(null);
@@ -164,7 +169,7 @@ export function useQueueManager(): QueueManagerState {
     if (!processingItem) return;
 
     if (taskStatus.status === "SUCCESS" && taskStatus.result?.email_id) {
-      logger.log(`[Queue] Task ${currentTaskId} completed successfully for ${processingItem.recipientName}`);
+      logger.info(`[Queue] Task ${currentTaskId} completed successfully for ${processingItem.recipientName}`);
 
       // Mark as completed
       completeItem(processingItem.id);
@@ -194,15 +199,20 @@ export function useQueueManager(): QueueManagerState {
       // This prevents the auto-start effect from firing prematurely
       setTimeout(() => {
         processingLockRef.current = null; // Release lock
-        logger.log("[Queue] Processing next item after success");
+        logger.debug("[Queue] Processing next item after success");
         processNextItem(); // Process next item
       }, 500);
 
     } else if (taskStatus.status === "FAILURE") {
-      logger.log(`[Queue] Task ${currentTaskId} failed for ${processingItem.recipientName}: ${taskStatus.error}`);
+      logger.info(QUEUE_ERRORS.TASK_FAILED.dev, {
+        taskId: currentTaskId,
+        recipientName: processingItem.recipientName,
+        error: taskStatus.error
+      });
 
       // Mark as failed
-      failItem(processingItem.id, taskStatus.error || "Task failed");
+      failItem(processingItem.id, taskStatus.error || QUEUE_ERRORS.TASK_FAILED.dev);
+      toastService.error(QUEUE_ERRORS.GENERATION_FAILED);
 
       // Remove from queue after delay
       setTimeout(() => {
@@ -218,7 +228,7 @@ export function useQueueManager(): QueueManagerState {
       // CRITICAL: Same pattern for failures
       setTimeout(() => {
         processingLockRef.current = null; // Release lock
-        logger.log("[Queue] Processing next item after failure");
+        logger.debug("[Queue] Processing next item after failure");
         processNextItem();
       }, 1000);
     }
@@ -229,14 +239,14 @@ export function useQueueManager(): QueueManagerState {
     const processingItem = getProcessingItem();
     if (processingItem && processingItem.taskId) {
       // Resume polling for existing task
-      logger.log(`[Queue] Resuming task ${processingItem.taskId} on mount`);
+      logger.info(`[Queue] Resuming task ${processingItem.taskId} on mount`);
       setCurrentTaskId(processingItem.taskId);
       setProcessing(processingItem.id);
       processingRef.current = true;
     } else if (processingItem) {
       // No task ID means it was interrupted - reset to pending
-      logger.log("[Queue] Found interrupted processing item, resetting");
-      failItem(processingItem.id, "Process was interrupted");
+      logger.debug("[Queue] Found interrupted processing item, resetting");
+      failItem(processingItem.id, QUEUE_ERRORS.TASK_INTERRUPTED.dev);
       setProcessing(null);
       processingRef.current = false;
     }
@@ -246,11 +256,11 @@ export function useQueueManager(): QueueManagerState {
   // The mutex lock in processNextItem prevents duplicate calls
   useEffect(() => {
     if (user?.uid && emailTemplate && supabaseReady && pendingCount > 0 && !isProcessing) {
-      logger.log("[Queue] Prerequisites met, starting processing");
+      logger.debug("[Queue] Prerequisites met, starting processing");
       setTimeout(() => processNextItem(), 100);
     }
-  }, [user?.uid, emailTemplate, supabaseReady, pendingCount, isProcessing]); 
-  
+  }, [user?.uid, emailTemplate, supabaseReady, pendingCount, isProcessing]);
+
   return {
     currentTaskId,
     currentTaskStatus: taskStatus || null,
@@ -259,7 +269,7 @@ export function useQueueManager(): QueueManagerState {
     completedCount,
     failedCount,
     addToQueue: (items: Array<{name: string; interest: string}>) => {
-      logger.log(`[Queue] Adding ${items.length} items to queue`);
+      logger.info(`[Queue] Adding ${items.length} items to queue`);
       addItems(items);
       // Trigger processing after items are added
       setTimeout(() => processNextItem(), 100);

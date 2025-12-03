@@ -2,35 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Development Commands
-
-```bash
-# Start development server with Turbopack
-npm run dev
-
-# Build for production
-npm run build
-
-# Start production server
-npm start
-
-# Run linting
-npm run lint
-
-# Generate Supabase types from database schema
-npm run types:generate
-```
-
 ## Architecture Overview
 
 ### Tech Stack
 - **Frontend**: Next.js 15.3.2 (App Router) with React 19, TypeScript
-- **Backend API**: External API at `api.manit.codes` (or `localhost:8000` in dev)
-- **Authentication**: Supabase Auth with JWT tokens
-- **State Management**: Zustand (with localStorage persistence)
+- **Backend API**: External API at `scribeserver.onrender.com` (or `localhost:8000` in dev)
+- **Authentication**: Supabase Auth SSR
+- **State Management**: Zustand
 - **Data Fetching**: TanStack Query (React Query)
 - **Styling**: Tailwind CSS with shadcn/ui components
-- **PDF Processing**: pdfjs-dist (client-side)
 
 ### Core Application Flow
 
@@ -40,7 +20,7 @@ This is an email generation application with a persistent background queue syste
    - Supabase handles OAuth/email authentication with automatic token refresh
    - JWT tokens are cached in Zustand auth store (stores/auth-store.ts) for synchronous access
    - AuthContextProvider (context/AuthContextProvider.tsx) manages user state, syncs with Zustand, and initializes users via backend API
-   - **CRITICAL**: Supabase's `autoRefreshToken` handles all token refresh logic - no manual refresh needed
+   - **CRITICAL**: Token refresh is automatic via `createBrowserClient` with `autoRefreshToken: true` (config/supabase.ts) - tokens refresh ~5 minutes before expiry, and `onAuthStateChange` events sync refreshed tokens to Zustand
 
 2. **Email Generation Queue**:
    - Queue is managed by `useQueueManager` hook (hooks/useQueueManager.ts)
@@ -71,9 +51,10 @@ This is an email generation application with a persistent background queue syste
 
 **Session Management (stores/auth-store.ts)**:
 - Zustand store mirrors Supabase auth state for synchronous token access
-- Supabase's `autoRefreshToken` handles automatic token refresh at 55 minutes
-- AuthContextProvider syncs Zustand store via `onAuthStateChange` events
-- Tokens retrieved synchronously (no async overhead) from Zustand store
+- `createBrowserClient` with `autoRefreshToken: true` automatically refreshes tokens ~5 minutes before expiry
+- When tokens refresh, Supabase triggers `onAuthStateChange` events which sync the new session to Zustand
+- AuthContextProvider listens to these events and updates the Zustand store in real-time
+- Tokens retrieved synchronously (no async overhead) from Zustand store via `authStore.getToken()`
 - **Always use `authStore.getToken()` for auth** - it provides instant access to cached tokens
 
 **Queue Processing (hooks/useQueueManager.ts)**:
@@ -143,7 +124,8 @@ This is an email generation application with a persistent background queue syste
 
 1. **Never skip Supabase ready check**: Always wait for `supabaseReady` from `useAuth()` before making authenticated API calls
 2. **Queue processor location**: The queue manager MUST be initialized in `app/dashboard/layout.tsx` to persist across navigation
-3. **Session token caching**: Token access is synchronous via `authStore.getToken()` - Supabase handles automatic refresh
+3. **Session token caching**: Token access is synchronous via `authStore.getToken()` - automatic refresh happens via `autoRefreshToken: true` in the browser client, with refreshed tokens synced to Zustand through `onAuthStateChange` events
 4. **Zustand hydration**: Check `useHasHydrated()` before accessing persisted state to avoid SSR hydration mismatches
 5. **React Query signals**: AbortController signals are automatically passed by React Query - don't override them
 6. **Mutex locks**: The queue processing uses mutexes - don't add additional processing calls without understanding the locking mechanism
+7. **Middleware error handling**: Middleware automatically clears invalid sessions and redirects to login - expired tokens are handled gracefully

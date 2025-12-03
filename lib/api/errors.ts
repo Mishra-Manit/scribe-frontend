@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { API_ERRORS, AUTH_ERRORS } from "@/constants/error-messages";
 
 /**
  * Base API error class with retry information and user-friendly messages
@@ -24,12 +25,12 @@ export class ApiError extends Error {
    */
   getUserMessage(): string {
     if (this.status >= 500) {
-      return "Server error. Please try again later.";
+      return API_ERRORS.SERVER_ERROR.user;
     }
     if (this.status === 429) {
-      return `Rate limited. Please wait ${this.retryAfter || 60} seconds.`;
+      return `Too many requests. Please wait ${this.retryAfter || 60} seconds and try again.`;
     }
-    return this.message || "An error occurred. Please try again.";
+    return this.message || API_ERRORS.UNKNOWN.user;
   }
 }
 
@@ -40,10 +41,14 @@ export class ApiError extends Error {
  * These errors are retryable as they're often transient.
  */
 export class NetworkError extends ApiError {
-  constructor(message: string = "Network error. Please check your connection.") {
+  constructor(message: string = API_ERRORS.NETWORK.dev) {
     super(message, 0, "NETWORK_ERROR", true);
     this.name = "NetworkError";
     Object.setPrototypeOf(this, NetworkError.prototype);
+  }
+
+  getUserMessage(): string {
+    return API_ERRORS.NETWORK.user;
   }
 }
 
@@ -55,12 +60,16 @@ export class NetworkError extends ApiError {
  */
 export class AuthenticationError extends ApiError {
   constructor(
-    message: string = "Authentication failed. Please log in again.",
+    message: string = AUTH_ERRORS.TOKEN_INVALID.dev,
     status: number = 401
   ) {
     super(message, status, "AUTH_ERROR", false);
     this.name = "AuthenticationError";
     Object.setPrototypeOf(this, AuthenticationError.prototype);
+  }
+
+  getUserMessage(): string {
+    return AUTH_ERRORS.TOKEN_INVALID.user;
   }
 }
 
@@ -90,7 +99,7 @@ export class ValidationError extends ApiError {
         .join(", ");
       return `Validation failed: ${errorMessages}`;
     }
-    return this.message;
+    return API_ERRORS.VALIDATION.user;
   }
 }
 
@@ -102,13 +111,13 @@ export class ValidationError extends ApiError {
  */
 export class RateLimitError extends ApiError {
   constructor(retryAfter: number = 60) {
-    super("Too many requests", 429, "RATE_LIMIT_ERROR", true, retryAfter);
+    super(API_ERRORS.RATE_LIMIT.dev, 429, "RATE_LIMIT_ERROR", true, retryAfter);
     this.name = "RateLimitError";
     Object.setPrototypeOf(this, RateLimitError.prototype);
   }
 
   getUserMessage(): string {
-    return `Rate limited. Please wait ${this.retryAfter} seconds before trying again.`;
+    return `${API_ERRORS.RATE_LIMIT.user} (${this.retryAfter}s)`;
   }
 }
 
@@ -124,6 +133,10 @@ export class ServerError extends ApiError {
     this.name = "ServerError";
     Object.setPrototypeOf(this, ServerError.prototype);
   }
+
+  getUserMessage(): string {
+    return API_ERRORS.SERVER_ERROR.user;
+  }
 }
 
 /**
@@ -133,14 +146,14 @@ export class ServerError extends ApiError {
  * These errors are NOT retryable - cancellation was intentional.
  */
 export class AbortError extends ApiError {
-  constructor(message: string = "Request cancelled") {
+  constructor(message: string = API_ERRORS.REQUEST_CANCELLED.dev) {
     super(message, 0, "ABORT_ERROR", false);
     this.name = "AbortError";
     Object.setPrototypeOf(this, AbortError.prototype);
   }
 
   getUserMessage(): string {
-    return "Request was cancelled";
+    return API_ERRORS.REQUEST_CANCELLED.user;
   }
 }
 
@@ -151,7 +164,7 @@ export class AbortError extends ApiError {
  * These errors are retryable as they may succeed on retry.
  */
 export class TimeoutError extends ApiError {
-  constructor(message: string = "Request timed out", timeout?: number) {
+  constructor(message: string = API_ERRORS.REQUEST_TIMEOUT.dev, timeout?: number) {
     const fullMessage = timeout
       ? `${message} after ${timeout}ms`
       : message;
@@ -161,6 +174,6 @@ export class TimeoutError extends ApiError {
   }
 
   getUserMessage(): string {
-    return "Request timed out. Please try again.";
+    return API_ERRORS.REQUEST_TIMEOUT.user;
   }
 }

@@ -7,11 +7,31 @@
 
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { createLogger } from '@/utils/logger';
+import { v4 as uuidv4 } from 'uuid';
+
+const logger = createLogger('Middleware');
 
 export async function middleware(request: NextRequest) {
+  // Generate unique request ID for tracing
+  const requestId = uuidv4();
+
+  // Log incoming request
+  logger.info('Middleware processing request', {
+    requestId,
+    path: request.nextUrl.pathname,
+    method: request.method,
+    hasAuthCookie: request.cookies.has('sb-access-token') ||
+                   request.cookies.has('sb-sekufggxcfdeuamngppf-auth-token'),
+    userAgent: request.headers.get('user-agent')?.substring(0, 50) || 'unknown',
+  });
+
   let supabaseResponse = NextResponse.next({
     request,
   });
+
+  // Add request ID to response headers for client-side access
+  supabaseResponse.headers.set('X-Request-ID', requestId);
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -36,14 +56,73 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // CRITICAL: This triggers token refresh
-  // Use getSession() instead of getClaims() - it's the recommended method for SSR
+  // CRITICAL: getUser() validates JWT server-side (prevents session spoofing)
+  // Never use getSession() in middleware - it doesn't verify JWT signatures
   try {
-    await supabase.auth.getSession();
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error) {
+      logger.error('Auth validation failed', {
+        requestId,
+        error: error.message,
+        errorName: error.name,
+        errorStatus: error.status,
+        path: request.nextUrl.pathname,
+      });
+
+      // Clear invalid session
+      await supabase.auth.signOut();
+
+      // Redirect to login if accessing protected routes
+      if (request.nextUrl.pathname.startsWith('/dashboard')) {
+        logger.info('Redirecting to login', {
+          requestId,
+          from: request.nextUrl.pathname,
+        });
+        const redirectUrl = new URL('/', request.url);
+
+        return NextResponse.redirect(redirectUrl);
+      }
+    } else if (user) {
+      logger.debug('User validated', {
+        requestId,
+        userId: user.id,
+        userEmail: user.email,
+        path: request.nextUrl.pathname,
+      });
+    } else {
+      logger.debug('No user session', {
+        requestId,
+        path: request.nextUrl.pathname,
+      });
+    }
+
   } catch (error) {
-    // Log error but don't block the request
-    console.error('[Middleware] Session refresh failed:', error);
+    logger.error('Session validation error', {
+      requestId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      path: request.nextUrl.pathname,
+    });
+
+    // Clear potentially corrupted session
+    await supabase.auth.signOut();
+
+    // Redirect to login if accessing protected routes
+    if (request.nextUrl.pathname.startsWith('/dashboard')) {
+      logger.info('Redirecting to login after error', {
+        requestId,
+        from: request.nextUrl.pathname,
+      });
+      const redirectUrl = new URL('/', request.url);
+      return NextResponse.redirect(redirectUrl);
+    }
   }
+
+  logger.debug('Middleware complete', {
+    requestId,
+    path: request.nextUrl.pathname,
+  });
 
   return supabaseResponse;
 }

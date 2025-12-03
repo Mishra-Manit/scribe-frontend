@@ -7,6 +7,7 @@ import logger from '@/utils/logger';
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
+import { UI_ERRORS } from "@/constants/error-messages";
 
 interface Props {
   children: ReactNode;
@@ -51,7 +52,12 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    logger.error("[ErrorBoundary] Caught error:", error, errorInfo);
+    logger.error("ErrorBoundary caught error", {
+      error: error.message,
+      errorName: error.name,
+      errorStack: error.stack,
+      componentStack: errorInfo.componentStack
+    });
 
     // Log to error tracking service (e.g., Sentry)
     // Sentry.captureException(error, { contexts: { react: errorInfo } });
@@ -88,7 +94,7 @@ export class ErrorBoundary extends Component<Props, State> {
               <p className="text-gray-700">
                 {isApiError
                   ? (error as ApiError).getUserMessage()
-                  : error.message || "An unexpected error occurred. Please try again."}
+                  : error.message || UI_ERRORS.ERROR_BOUNDARY.user}
               </p>
 
               {/* Status code for API errors */}

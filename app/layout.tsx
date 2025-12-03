@@ -5,6 +5,8 @@ import { Inter } from "next/font/google"
 import { QueryProvider } from "@/providers/QueryProvider"
 import { AuthContextProvider } from "../context/AuthContextProvider"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
+import { Toaster } from "sonner"
+import { RequestIdCapture } from "@/components/RequestIdCapture"
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] })
 
@@ -28,6 +30,13 @@ export default function RootLayout({
             </ErrorBoundary>
           </AuthContextProvider>
         </QueryProvider>
+        <Toaster
+          position="top-right"
+          richColors
+          closeButton
+          duration={5000}
+        />
+        <RequestIdCapture />
       </body>
     </html>
   )
