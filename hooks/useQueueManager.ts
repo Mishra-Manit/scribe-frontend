@@ -174,9 +174,9 @@ export function useQueueManager(): QueueManagerState {
       // Mark as completed
       completeItem(processingItem.id);
 
-      // Invalidate email list to show new email
+      // Invalidate email history queries to show new email
       queryClient.invalidateQueries({
-        queryKey: ['emails', user?.uid]
+        queryKey: ['emails-infinite']  // Prefix matches ['emails-infinite', user?.uid]
       });
 
       // Invalidate user profile to update generation_count

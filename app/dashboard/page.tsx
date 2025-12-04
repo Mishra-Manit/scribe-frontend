@@ -260,16 +260,19 @@ export default function DashboardPage() {
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
                             Recipient Name
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
                             Interest/Field
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
                             Template Type
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[60%]">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
+                            Confidence
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[65%]">
                             Email Content
                           </th>
                         </tr>
@@ -294,6 +297,15 @@ export default function DashboardPage() {
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 align-top">
                                 <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800 capitalize">
                                   {email.template_type}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm align-top">
+                                <span className={`px-2 py-1 text-xs rounded-full ${
+                                  email.is_confident
+                                    ? 'bg-green-100 text-green-800'
+                                    : 'bg-amber-100 text-amber-800'
+                                }`}>
+                                  {email.is_confident ? 'Confident' : 'Not Confident'}
                                 </span>
                               </td>
                               <td className="px-6 py-4 text-sm text-gray-500 relative">
@@ -333,7 +345,7 @@ export default function DashboardPage() {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={4} className="px-6 py-4 text-center text-sm text-gray-500">
+                            <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
                               No email history found. Generate some emails to see them here!
                             </td>
                           </tr>

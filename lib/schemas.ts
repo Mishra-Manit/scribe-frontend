@@ -64,6 +64,7 @@ export const EmailResponseSchema = z.object({
   email_message: z.string(),
   template_type: z.string(), // Could be TemplateTypeSchema but backend might return string
   metadata: z.record(z.string(), z.unknown()).nullable(),
+  is_confident: z.boolean(),
   created_at: z.string().datetime(),
 });
 export type EmailResponse = z.infer<typeof EmailResponseSchema>;
