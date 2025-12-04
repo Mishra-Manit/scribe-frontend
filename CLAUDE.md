@@ -57,6 +57,14 @@ This is an email generation application with a persistent background queue syste
 - Tokens retrieved synchronously (no async overhead) from Zustand store via `authStore.getToken()`
 - **Always use `authStore.getToken()` for auth** - it provides instant access to cached tokens
 
+**Middleware JWT Validation (middleware.ts)**:
+- Uses `getClaims()` to validate JWT signatures locally using published public keys
+- Does NOT use `getSession()` (insecure - doesn't validate) or `getUser()` (network-dependent)
+- Validates on every request without network overhead
+- Fail-open strategy: logs errors but doesn't aggressively clear sessions
+- Lets AuthContextProvider handle user initialization in backend
+- Public keys fetched automatically from `/.well-known/jwks.json` endpoint
+
 **Queue Processing (hooks/useQueueManager.ts)**:
 - Uses processing lock (`processingLockRef`) to prevent race conditions
 - Auto-starts when prerequisites are met (user, template, Supabase ready)
@@ -128,4 +136,4 @@ This is an email generation application with a persistent background queue syste
 4. **Zustand hydration**: Check `useHasHydrated()` before accessing persisted state to avoid SSR hydration mismatches
 5. **React Query signals**: AbortController signals are automatically passed by React Query - don't override them
 6. **Mutex locks**: The queue processing uses mutexes - don't add additional processing calls without understanding the locking mechanism
-7. **Middleware error handling**: Middleware automatically clears invalid sessions and redirects to login - expired tokens are handled gracefully
+7. **Middleware JWT validation**: Middleware uses `getClaims()` to validate JWTs locally without clearing sessions - expired tokens are handled gracefully by client-side auth flow

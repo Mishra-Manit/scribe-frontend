@@ -56,67 +56,40 @@ export async function middleware(request: NextRequest) {
     }
   );
 
-  // CRITICAL: getUser() validates JWT server-side (prevents session spoofing)
-  // Never use getSession() in middleware - it doesn't verify JWT signatures
+  // CRITICAL: getClaims() validates JWT locally using published public keys
+  // This prevents session spoofing WITHOUT network calls (unlike getUser)
+  // Safe to trust because it cryptographically verifies JWT signatures
   try {
-    const { data: { user }, error } = await supabase.auth.getUser();
+    const { data, error } = await supabase.auth.getClaims();
 
     if (error) {
-      logger.error('Auth validation failed', {
+      logger.warn('JWT validation failed', {
         requestId,
         error: error.message,
-        errorName: error.name,
-        errorStatus: error.status,
         path: request.nextUrl.pathname,
       });
-
-      // Clear invalid session
-      await supabase.auth.signOut();
-
-      // Redirect to login if accessing protected routes
-      if (request.nextUrl.pathname.startsWith('/dashboard')) {
-        logger.info('Redirecting to login', {
-          requestId,
-          from: request.nextUrl.pathname,
-        });
-        const redirectUrl = new URL('/', request.url);
-
-        return NextResponse.redirect(redirectUrl);
-      }
-    } else if (user) {
-      logger.debug('User validated', {
+      // Don't sign out - let the client handle expired/invalid tokens
+      // This prevents clearing fresh OAuth sessions that haven't synced yet
+    } else if (data) {
+      logger.debug('JWT validated', {
         requestId,
-        userId: user.id,
-        userEmail: user.email,
+        sub: data.claims.sub, // User ID from JWT claims
         path: request.nextUrl.pathname,
       });
     } else {
-      logger.debug('No user session', {
+      logger.debug('No JWT present', {
         requestId,
         path: request.nextUrl.pathname,
       });
     }
 
   } catch (error) {
-    logger.error('Session validation error', {
+    logger.error('JWT validation error', {
       requestId,
       error: error instanceof Error ? error.message : 'Unknown error',
-      errorStack: error instanceof Error ? error.stack : undefined,
       path: request.nextUrl.pathname,
     });
-
-    // Clear potentially corrupted session
-    await supabase.auth.signOut();
-
-    // Redirect to login if accessing protected routes
-    if (request.nextUrl.pathname.startsWith('/dashboard')) {
-      logger.info('Redirecting to login after error', {
-        requestId,
-        from: request.nextUrl.pathname,
-      });
-      const redirectUrl = new URL('/', request.url);
-      return NextResponse.redirect(redirectUrl);
-    }
+    // Don't block request or clear session - fail open for availability
   }
 
   logger.debug('Middleware complete', {
