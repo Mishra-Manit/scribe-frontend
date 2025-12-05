@@ -76,7 +76,7 @@ export const userAPI = {
    * Creates user profile if it doesn't exist, returns existing if it does.
    * Should be called after user signs in with Supabase.
    *
-   * @param displayName - Optional display name for the user
+   * @param displayName - Display name auto-derived from OAuth (e.g., Google full name or email username)
    * @param options - Request options
    * @returns User profile data
    *
@@ -85,19 +85,15 @@ export const userAPI = {
    * const profile = await userAPI.initUser('John Doe');
    */
   initUser: async (
-    displayName?: string,
+    displayName: string,
     options?: ApiRequestOptions
   ): Promise<UserProfile> => {
-    const body = displayName
-      ? JSON.stringify({ display_name: displayName })
-      : undefined;
-
     return apiClient.requestWithValidation(
       "/api/user/init",
       UserProfileSchema,
       {
         method: "POST",
-        body,
+        body: JSON.stringify({ display_name: displayName }),
         ...options,
       }
     );
