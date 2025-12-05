@@ -32,11 +32,10 @@ This is an email generation application with a persistent background queue syste
 
 3. **API Layer Architecture**:
    ```
-   Components → React Query → emailService / api → apiClient → Backend API
+   Components → React Query → api (userAPI/emailAPI/templateAPI) → apiClient → Backend API
    ```
    - `apiClient` (lib/api/client.ts): Production-grade client with retry, deduplication, request cancellation
-   - `emailService` (lib/email-service.ts): Email-specific operations wrapper
-   - `api` (lib/api/index.ts): Unified API with user and email namespaces, includes Zod validation
+   - `api` (lib/api/index.ts): Unified API with user, email, and template namespaces, includes Zod validation
    - All requests automatically include JWT auth via synchronous `authStore.getToken()`
 
 4. **State Management**:
@@ -100,7 +99,7 @@ This is an email generation application with a persistent background queue syste
 - Queue state is managed entirely by `useSimpleQueueStore`
 - Queue logic (processing, polling) is in `useQueueManager`
 - **Never call `processNextItem()` directly** - it's managed by the hook's effects
-- To add items: use `addToQueue()` from `useQueueManager` return value
+- To add items: use `useSimpleQueueStore((state) => state.addItems)` or `addToQueue()` from `useQueueManager`
 
 **Component Patterns**:
 - All pages are client components (`"use client"`)
@@ -121,8 +120,8 @@ This is an email generation application with a persistent background queue syste
   - `ui/`: shadcn/ui components
 - **hooks/**: Custom React hooks (auth, queue, state management)
 - **lib/**: Core utilities
-  - `api/`: API client infrastructure
-  - `auth/`: Session management
+  - `api/`: API client infrastructure (client, errors, retry, deduplication)
+  - `supabase/`: Supabase client and storage utilities
 - **stores/**: Zustand state stores
 - **context/**: React Context providers
 - **types/**: TypeScript type definitions (auto-generated from Supabase)

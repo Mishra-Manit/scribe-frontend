@@ -16,38 +16,27 @@ export function QueueStatus() {
     completedCount,
     failedCount,
   } = useQueueState();
-  
-  // Determine status details
-  const getStatusDetails = () => {
-    if (isProcessing && currentTaskStatus) {
-      const step = currentTaskStatus.result?.current_step;
-      return {
-        subtitle: step ? step.replace(/_/g, ' ') : "Processing...",
-        color: "text-blue-600",
-      };
-    }
-
-    if (pendingCount > 0) {
-      return {
-        subtitle: "In queue",
-        color: "text-yellow-600",
-      };
-    }
-
-    return {
-      subtitle: "No emails queued",
-      color: "text-gray-500",
-    };
-  };
-
-  const { subtitle, color } = getStatusDetails();
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">
-          Emails in Queue
-        </CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-sm font-medium">
+            Emails in Queue
+          </CardTitle>
+          <span className="text-xs text-blue-600 flex items-center gap-1">
+            {isProcessing && currentTaskStatus ? (
+              <>
+                <span className="inline-block w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse" />
+                {currentTaskStatus.result?.current_step?.replace(/_/g, ' ') || 'Processing...'}
+              </>
+            ) : pendingCount > 0 ? (
+              '• In queue'
+            ) : (
+              <span className="text-gray-500">• Ready</span>
+            )}
+          </span>
+        </div>
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -62,16 +51,22 @@ export function QueueStatus() {
         </svg>
       </CardHeader>
       <CardContent>
-        <div className={`text-2xl font-bold ${color}`}>
-          {pendingCount}
+        {/* Dual Metrics Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex flex-col">
+            <div className="text-2xl font-bold text-gray-900">{pendingCount}</div>
+            <p className="text-xs text-gray-600">Pending</p>
+          </div>
+          <div className="flex flex-col">
+            <div className="text-2xl font-bold text-green-600">{completedCount}</div>
+            <p className="text-xs text-gray-600">Completed</p>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          {subtitle}
-        </p>
-        {(completedCount > 0 || failedCount > 0) && (
-          <div className="mt-2 text-xs text-gray-500">
-            {completedCount > 0 && <span className="mr-3">✓ {completedCount}</span>}
-            {failedCount > 0 && <span>✗ {failedCount}</span>}
+
+        {/* Failed Count - Only Shown When > 0 */}
+        {failedCount > 0 && (
+          <div className="mt-2">
+            <p className="text-xs text-red-600">Failed: {failedCount}</p>
           </div>
         )}
       </CardContent>

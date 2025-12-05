@@ -31,16 +31,20 @@ export function useQueueState(): QueueState {
   const isProcessing = useSimpleQueueStore(state => state.isProcessing);
   const processingItemId = useSimpleQueueStore(state => state.processingItemId);
   const currentTaskStatus = useSimpleQueueStore(state => state.currentTaskStatus);
+  const checkAndResetDaily = useSimpleQueueStore(state => state.checkAndResetDaily);
+  const sessionCompletedCount = useSimpleQueueStore(state => state.sessionCompletedCount);
+  const sessionFailedCount = useSimpleQueueStore(state => state.sessionFailedCount);
 
-  // Calculate queue stats
+  // Check if we need to reset daily counters (resets at midnight)
+  checkAndResetDaily();
+
+  // Calculate pending count from queue (real-time)
   const pendingCount = queue.filter(item => item.status === "pending").length;
-  const completedCount = queue.filter(item => item.status === "completed").length;
-  const failedCount = queue.filter(item => item.status === "failed").length;
 
   return {
     pendingCount,
-    completedCount,
-    failedCount,
+    completedCount: sessionCompletedCount, // Use session counter instead of filtering queue
+    failedCount: sessionFailedCount,       // Use session counter instead of filtering queue
     isProcessing,
     processingItemId,
     currentTaskStatus,

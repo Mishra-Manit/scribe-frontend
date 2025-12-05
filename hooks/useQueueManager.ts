@@ -9,7 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useSimpleQueueStore } from "@/stores/simple-queue-store";
 import { useEmailTemplate } from "@/stores/ui-store";
-import { emailService, type TaskStatus } from "@/lib/email-service";
+import { emailAPI, type TaskStatusResponse } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import logger from "@/utils/logger";
 import { QUEUE_ERRORS } from "@/constants/error-messages";
@@ -18,7 +18,7 @@ import { toastService } from "@/lib/toast-service";
 interface QueueManagerState {
   // Current processing state
   currentTaskId: string | null;
-  currentTaskStatus: TaskStatus | null;
+  currentTaskStatus: TaskStatusResponse | null;
   isProcessing: boolean;
   
   // Queue stats
@@ -54,22 +54,28 @@ export function useQueueManager(): QueueManagerState {
     setCurrentTaskStatus,
     getNextPending,
     getProcessingItem,
+    incrementSessionCompleted,
+    incrementSessionFailed,
+    checkAndResetDaily,
+    sessionCompletedCount,
+    sessionFailedCount,
   } = useSimpleQueueStore();
 
   // Local state for current processing
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const processingRef = useRef(false);
   const processingLockRef = useRef<Promise<void> | null>(null);
-  
+
+  // Check and reset daily counters if needed
+  checkAndResetDaily();
+
   // Calculate queue stats
   const pendingCount = queue.filter(item => item.status === "pending").length;
-  const completedCount = queue.filter(item => item.status === "completed").length;
-  const failedCount = queue.filter(item => item.status === "failed").length;
   
   // Poll task status when we have a task ID
   const { data: taskStatus } = useQuery({
     queryKey: ['task', currentTaskId],
-    queryFn: () => emailService.getTaskStatus(currentTaskId!),
+    queryFn: () => emailAPI.getTaskStatus(currentTaskId!),
     enabled: !!currentTaskId,
     refetchInterval: (query) => {
       const status = query.state.data?.status;
@@ -118,7 +124,7 @@ export function useQueueManager(): QueueManagerState {
 
       try {
         // Start email generation
-        const response = await emailService.generateEmail({
+        const response = await emailAPI.generateEmail({
           email_template: emailTemplate,
           recipient_name: nextItem.recipientName,
           recipient_interest: nextItem.recipientInterest,
@@ -134,6 +140,7 @@ export function useQueueManager(): QueueManagerState {
           error: error instanceof Error ? error.message : 'Unknown error'
         });
         failItem(nextItem.id, error instanceof Error ? error.message : QUEUE_ERRORS.UNKNOWN_ERROR.dev);
+        incrementSessionFailed();
         toastService.error(QUEUE_ERRORS.GENERATION_FAILED);
 
         // Clear processing state
@@ -171,8 +178,9 @@ export function useQueueManager(): QueueManagerState {
     if (taskStatus.status === "SUCCESS" && taskStatus.result?.email_id) {
       logger.info(`[Queue] Task ${currentTaskId} completed successfully for ${processingItem.recipientName}`);
 
-      // Mark as completed
+      // Mark as completed and increment session counter
       completeItem(processingItem.id);
+      incrementSessionCompleted();
 
       // Invalidate email history queries to show new email
       queryClient.invalidateQueries({
@@ -210,8 +218,12 @@ export function useQueueManager(): QueueManagerState {
         error: taskStatus.error
       });
 
-      // Mark as failed
-      failItem(processingItem.id, taskStatus.error || QUEUE_ERRORS.TASK_FAILED.dev);
+      // Mark as failed and increment session counter
+      const errorMessage = typeof taskStatus.error === 'string'
+        ? taskStatus.error
+        : taskStatus.error?.message || QUEUE_ERRORS.TASK_FAILED.dev;
+      failItem(processingItem.id, errorMessage);
+      incrementSessionFailed();
       toastService.error(QUEUE_ERRORS.GENERATION_FAILED);
 
       // Remove from queue after delay
@@ -266,8 +278,8 @@ export function useQueueManager(): QueueManagerState {
     currentTaskStatus: taskStatus || null,
     isProcessing,
     pendingCount,
-    completedCount,
-    failedCount,
+    completedCount: sessionCompletedCount,
+    failedCount: sessionFailedCount,
     addToQueue: (items: Array<{name: string; interest: string}>) => {
       logger.info(`[Queue] Adding ${items.length} items to queue`);
       addItems(items);

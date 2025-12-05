@@ -12,17 +12,34 @@ import { v4 as uuidv4 } from 'uuid';
 
 const logger = createLogger('Middleware');
 
+// Extract project ID from Supabase URL for cookie detection
+// URL format: https://<project-id>.supabase.co
+function getSupabaseProjectId(): string | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return null;
+  const match = url.match(/https:\/\/([^.]+)\.supabase\.co/);
+  return match ? match[1] : null;
+}
+
+const projectId = getSupabaseProjectId();
+
+// Routes that require authentication
+const PROTECTED_ROUTES = ['/dashboard'];
+
 export async function middleware(request: NextRequest) {
   // Generate unique request ID for tracing
   const requestId = uuidv4();
+
+  // Check for auth cookie (generic or project-specific)
+  const hasAuthCookie = request.cookies.has('sb-access-token') ||
+    (projectId ? request.cookies.has(`sb-${projectId}-auth-token`) : false);
 
   // Log incoming request
   logger.info('Middleware processing request', {
     requestId,
     path: request.nextUrl.pathname,
     method: request.method,
-    hasAuthCookie: request.cookies.has('sb-access-token') ||
-                   request.cookies.has('sb-sekufggxcfdeuamngppf-auth-token'),
+    hasAuthCookie,
     userAgent: request.headers.get('user-agent')?.substring(0, 50) || 'unknown',
   });
 
@@ -59,6 +76,9 @@ export async function middleware(request: NextRequest) {
   // CRITICAL: getClaims() validates JWT locally using published public keys
   // This prevents session spoofing WITHOUT network calls (unlike getUser)
   // Safe to trust because it cryptographically verifies JWT signatures
+  const pathname = request.nextUrl.pathname;
+  const isProtectedRoute = PROTECTED_ROUTES.some(route => pathname.startsWith(route));
+
   try {
     const { data, error } = await supabase.auth.getClaims();
 
@@ -66,30 +86,57 @@ export async function middleware(request: NextRequest) {
       logger.warn('JWT validation failed', {
         requestId,
         error: error.message,
-        path: request.nextUrl.pathname,
+        path: pathname,
       });
-      // Don't sign out - let the client handle expired/invalid tokens
-      // This prevents clearing fresh OAuth sessions that haven't synced yet
+      // Redirect to login if accessing protected route with invalid token
+      if (isProtectedRoute) {
+        logger.info('Redirecting unauthenticated user from protected route', {
+          requestId,
+          path: pathname,
+        });
+        const redirectUrl = new URL('/login', request.url);
+        redirectUrl.searchParams.set('redirect', pathname);
+        return NextResponse.redirect(redirectUrl);
+      }
     } else if (data) {
       logger.debug('JWT validated', {
         requestId,
         sub: data.claims.sub, // User ID from JWT claims
-        path: request.nextUrl.pathname,
+        path: pathname,
       });
     } else {
       logger.debug('No JWT present', {
         requestId,
-        path: request.nextUrl.pathname,
+        path: pathname,
       });
+      // Redirect to login if accessing protected route without token
+      if (isProtectedRoute) {
+        logger.info('Redirecting unauthenticated user from protected route', {
+          requestId,
+          path: pathname,
+        });
+        const redirectUrl = new URL('/login', request.url);
+        redirectUrl.searchParams.set('redirect', pathname);
+        return NextResponse.redirect(redirectUrl);
+      }
     }
 
   } catch (error) {
     logger.error('JWT validation error', {
       requestId,
       error: error instanceof Error ? error.message : 'Unknown error',
-      path: request.nextUrl.pathname,
+      path: pathname,
     });
-    // Don't block request or clear session - fail open for availability
+    // For protected routes, redirect on error rather than fail-open
+    if (isProtectedRoute) {
+      logger.info('Redirecting user due to JWT validation error', {
+        requestId,
+        path: pathname,
+      });
+      const redirectUrl = new URL('/login', request.url);
+      redirectUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(redirectUrl);
+    }
   }
 
   logger.debug('Middleware complete', {

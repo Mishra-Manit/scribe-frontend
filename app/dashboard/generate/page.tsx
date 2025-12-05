@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
-import { useQueueActions } from "@/hooks/useQueueActions";
+import { useSimpleQueueStore } from "@/stores/simple-queue-store";
 import {
   useEmailTemplate,
   useSetEmailTemplate,
@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 
 export default function GenerateEmailsPage() {
   const { user } = useAuth();
-  const { addToQueue } = useQueueActions();
+  const addToQueue = useSimpleQueueStore((state) => state.addItems);
 
   // Wait for Zustand stores to hydrate
   const uiHydrated = useHasHydrated();

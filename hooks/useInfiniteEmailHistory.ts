@@ -7,7 +7,7 @@
 
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { emailService } from "@/lib/email-service";
+import { emailAPI } from "@/lib/api";
 import { EmailHistory } from "@/lib/schemas";
 
 const EMAILS_PER_PAGE = 100;
@@ -18,7 +18,7 @@ export function useInfiniteEmailHistory() {
   return useInfiniteQuery<EmailHistory>({
     queryKey: ['emails-infinite', user?.uid],
     queryFn: ({ pageParam = 0 }) => {
-      return emailService.getEmailHistory(EMAILS_PER_PAGE, pageParam as number);
+      return emailAPI.getEmailHistory(EMAILS_PER_PAGE, pageParam as number);
     },
     getNextPageParam: (lastPage, allPages) => {
       // If the last page has fewer emails than the page size, we've reached the end
