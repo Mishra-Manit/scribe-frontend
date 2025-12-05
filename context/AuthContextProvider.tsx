@@ -173,7 +173,7 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
     setUserInitError(null);
 
     try {
-      const displayName = user.displayName || user.email?.split('@')[0];
+      const displayName = user.displayName || user.email?.split('@')[0] || 'User';
       await api.user.initUser(displayName);
       logger.info('User initialization retry successful', { userId: user.uid });
     } catch (error: any) {
