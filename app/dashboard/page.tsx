@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useInfiniteEmailHistory } from "@/hooks/useInfiniteEmailHistory";
@@ -17,10 +17,11 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Copy, Check, Download, Loader2, ChevronDown } from "lucide-react";
+import { Copy, Check, Download, Loader2, ChevronDown, Trash2 } from "lucide-react";
 import { QueueStatus } from "@/components/QueueStatus";
 import { getAuthToken } from "@/lib/api/client";
 import { useEmailExport } from "@/hooks/useEmailExport";
+import { useEmailDiscard } from "@/hooks/useEmailDiscard";
 
 export default function DashboardPage() {
   const { user, loading, supabaseReady } = useAuth();
@@ -63,6 +64,19 @@ export default function DashboardPage() {
 
   // Email export functionality
   const { isExporting, error, exportEmails } = useEmailExport();
+
+  // Email discard functionality
+  const { mutate: discardEmail } = useEmailDiscard({
+    onSuccess: (data) => {
+      console.log(`Email ${data.displayed ? 'restored' : 'discarded'}`);
+    },
+    onError: (error) => {
+      console.error('Failed to discard email:', error);
+    },
+  });
+
+  // Track which email is being discarded
+  const [discardingEmailId, setDiscardingEmailId] = useState<string | null>(null);
 
   // UI state from Zustand
   const hoveredEmailId = useHoveredEmailId();
@@ -260,19 +274,19 @@ export default function DashboardPage() {
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[12%]">
                             Recipient Name
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[12%]">
                             Interest/Field
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[8%]">
                             Template Type
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[10%]">
                             Confidence
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[65%]">
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[58%]">
                             Email Content
                           </th>
                         </tr>
@@ -286,8 +300,10 @@ export default function DashboardPage() {
                               onMouseEnter={() => setHoveredEmailId(email.id)}
                               onMouseLeave={() => setHoveredEmailId(null)}
                             >
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 align-top">
-                                {email.recipient_name}
+                              <td className="px-6 py-4 text-sm font-medium text-gray-900 align-top">
+                                <div className="max-w-xs break-words">
+                                  {email.recipient_name}
+                                </div>
                               </td>
                               <td className="px-6 py-4 text-sm text-gray-500 align-top">
                                 <div className="max-w-xs break-words">
@@ -314,30 +330,57 @@ export default function DashboardPage() {
                                     {email.email_message || "No content"}
                                   </pre>
                                   {hoveredEmailId === email.id && (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="absolute top-4 right-4 shadow-lg"
-                                      onClick={async () => {
-                                        if (email.email_message) {
-                                          await navigator.clipboard.writeText(email.email_message);
-                                          setCopiedEmailId(email.id);
-                                          setTimeout(() => setCopiedEmailId(null), 2000);
-                                        }
-                                      }}
-                                    >
-                                      {copiedEmailId === email.id ? (
-                                        <>
-                                          <Check className="h-4 w-4 mr-1" />
-                                          Copied!
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Copy className="h-4 w-4 mr-1" />
-                                          Copy
-                                        </>
-                                      )}
-                                    </Button>
+                                    <div className="absolute top-2 right-4 flex gap-2">
+                                      {/* Discard Button */}
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="shadow-lg hover:bg-red-50 hover:border-red-300"
+                                        onClick={() => {
+                                          setDiscardingEmailId(email.id);
+                                          discardEmail(
+                                            { emailId: email.id, displayed: false },
+                                            {
+                                              onSettled: () => setDiscardingEmailId(null),
+                                            }
+                                          );
+                                        }}
+                                        disabled={discardingEmailId === email.id}
+                                      >
+                                        {discardingEmailId === email.id ? (
+                                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                        ) : (
+                                          <Trash2 className="h-4 w-4 mr-1 text-red-600" />
+                                        )}
+                                        {discardingEmailId === email.id ? 'Discarding...' : 'Discard'}
+                                      </Button>
+
+                                      {/* Copy Button */}
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="shadow-lg"
+                                        onClick={async () => {
+                                          if (email.email_message) {
+                                            await navigator.clipboard.writeText(email.email_message);
+                                            setCopiedEmailId(email.id);
+                                            setTimeout(() => setCopiedEmailId(null), 2000);
+                                          }
+                                        }}
+                                      >
+                                        {copiedEmailId === email.id ? (
+                                          <>
+                                            <Check className="h-4 w-4 mr-1" />
+                                            Copied!
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Copy className="h-4 w-4 mr-1" />
+                                            Copy
+                                          </>
+                                        )}
+                                      </Button>
+                                    </div>
                                   )}
                                 </div>
                               </td>

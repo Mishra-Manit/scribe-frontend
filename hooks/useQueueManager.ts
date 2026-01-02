@@ -74,7 +74,7 @@ export function useQueueManager(): QueueManagerState {
   
   // Poll task status when we have a task ID
   const { data: taskStatus } = useQuery({
-    queryKey: ['task', currentTaskId],
+    queryKey: currentTaskId ? queryKeys.tasks.status(currentTaskId) : ['task-disabled'],
     queryFn: () => emailAPI.getTaskStatus(currentTaskId!),
     enabled: !!currentTaskId,
     refetchInterval: (query) => {
@@ -184,7 +184,7 @@ export function useQueueManager(): QueueManagerState {
 
       // Invalidate email history queries to show new email
       queryClient.invalidateQueries({
-        queryKey: ['emails-infinite']  // Prefix matches ['emails-infinite', user?.uid]
+        queryKey: queryKeys.emails.infiniteAll()  // Invalidates all infinite queries
       });
 
       // Invalidate user profile to update generation_count

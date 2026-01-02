@@ -16,6 +16,7 @@ import {
   GenerateEmailResponseSchema,
   TaskStatusResponseSchema,
   EmailResponseSchema,
+  UpdateEmailRequestSchema,
   UserProfileSchema,
   TemplateResponseSchema,
   TemplateListSchema,
@@ -24,6 +25,7 @@ import {
   type GenerateEmailResponse,
   type TaskStatusResponse,
   type EmailResponse,
+  type UpdateEmailRequest,
   type TaskStatus,
   type UserProfile,
   type TemplateGenerationRequest,
@@ -238,6 +240,46 @@ export const emailAPI = {
       `/api/email/${emailId}`,
       EmailResponseSchema,
       options
+    );
+  },
+
+  /**
+   * Update email properties (discard/restore)
+   *
+   * @param emailId - Email UUID
+   * @param data - Update request data
+   * @param options - Request options
+   * @returns Updated email details
+   *
+   * @example
+   * // Discard email
+   * const updated = await emailAPI.updateEmail(emailId, { displayed: false });
+   *
+   * @example
+   * // With React Mutation
+   * useMutation({
+   *   mutationFn: ({ emailId, displayed }: { emailId: string; displayed: boolean }) =>
+   *     emailAPI.updateEmail(emailId, { displayed })
+   * })
+   */
+  updateEmail: async (
+    emailId: string,
+    data: UpdateEmailRequest,
+    options?: ApiRequestOptions
+  ): Promise<EmailResponse> => {
+    return apiClient.requestWithValidation(
+      `/api/email/${emailId}`,
+      EmailResponseSchema,
+      {
+        method: "PATCH",
+        body: JSON.stringify(data),
+        // Enable retry for mutations (network failures only)
+        retry: {
+          maxAttempts: 2,
+          baseDelay: 1000,
+        },
+        ...options,
+      }
     );
   },
 };

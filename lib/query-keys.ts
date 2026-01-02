@@ -45,6 +45,13 @@ export const queryKeys = {
     list: (limit: number, offset: number) =>
       [...queryKeys.emails.lists(), { limit, offset }] as const,
 
+    // Infinite scroll email history for a specific user
+    infinite: (userId: string) =>
+      [...queryKeys.emails.all, 'infinite', userId] as const,
+
+    // Base key for all infinite queries (for invalidation)
+    infiniteAll: () => [...queryKeys.emails.all, 'infinite'] as const,
+
     // Individual email details
     detail: (emailId: string) =>
       [...queryKeys.emails.all, 'detail', emailId] as const,
@@ -87,24 +94,36 @@ export type QueryKeys = typeof queryKeys;
  *      queryFn: () => api.email.getEmailHistory(20, 0),
  *    })
  *
- * 2. Invalidate all email lists after generating new email:
+ * 2. Fetch infinite email history:
+ *    useInfiniteQuery({
+ *      queryKey: queryKeys.emails.infinite(userId),
+ *      queryFn: ({ pageParam }) => api.email.getEmailHistory(20, pageParam),
+ *    })
+ *
+ * 3. Invalidate all email lists after generating new email:
  *    queryClient.invalidateQueries({
  *      queryKey: queryKeys.emails.lists()
  *    })
  *    // This invalidates all variations: list(20,0), list(50,0), etc.
  *
- * 3. Invalidate specific email after update:
+ * 4. Invalidate all infinite queries:
+ *    queryClient.invalidateQueries({
+ *      queryKey: queryKeys.emails.infiniteAll()
+ *    })
+ *    // This invalidates all infinite queries for all users
+ *
+ * 5. Invalidate specific email after update:
  *    queryClient.invalidateQueries({
  *      queryKey: queryKeys.emails.detail(emailId)
  *    })
  *
- * 4. Prefetch email on hover:
+ * 6. Prefetch email on hover:
  *    queryClient.prefetchQuery({
  *      queryKey: queryKeys.emails.detail(emailId),
  *      queryFn: () => api.email.getEmail(emailId),
  *    })
  *
- * 5. Poll task status:
+ * 7. Poll task status:
  *    useQuery({
  *      queryKey: queryKeys.tasks.status(taskId),
  *      queryFn: () => api.email.getTaskStatus(taskId),

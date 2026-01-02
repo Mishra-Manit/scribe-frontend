@@ -65,6 +65,7 @@ export const EmailResponseSchema = z.object({
   template_type: z.string(), // Could be TemplateTypeSchema but backend might return string
   metadata: z.record(z.string(), z.unknown()).nullable(),
   is_confident: z.boolean(),
+  displayed: z.boolean().default(true), // NEW FIELD
   created_at: z.string().datetime(),
 });
 export type EmailResponse = z.infer<typeof EmailResponseSchema>;
@@ -74,6 +75,14 @@ export type EmailResponse = z.infer<typeof EmailResponseSchema>;
  */
 export const EmailHistorySchema = z.array(EmailResponseSchema);
 export type EmailHistory = z.infer<typeof EmailHistorySchema>;
+
+/**
+ * Update email request schema - PATCH /api/email/{email_id}
+ */
+export const UpdateEmailRequestSchema = z.object({
+  displayed: z.boolean(),
+});
+export type UpdateEmailRequest = z.infer<typeof UpdateEmailRequestSchema>;
 
 /**
  * User profile schema - GET /api/user and POST /api/user/init

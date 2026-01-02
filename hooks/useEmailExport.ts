@@ -60,7 +60,9 @@ export function useEmailExport(): UseEmailExportReturn {
           break;
         }
 
-        allEmails.push(...batch);
+        // Filter out discarded emails (backend already filters, but this is defensive)
+        const displayedEmails = batch.filter(email => email.displayed !== false);
+        allEmails.push(...displayedEmails);
         offset += BATCH_SIZE;
 
         // Check if we've reached the end (batch returned less than requested)
