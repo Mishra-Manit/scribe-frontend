@@ -2,7 +2,7 @@
 
 ## What is Scribe?
 
-Scribe is a SaaS application designed for academic outreach automation. It helps students generate personalized cold emails to professors and researchers by combining web scraping, AI-powered content generation, and smart template processing. The application streamlines the process of reaching out to potential research mentors with contextually relevant, personalized communications.
+Scribe is a SaaS application designed for academic outreach automation. It helps students generate personalized cold emails to professors and researchers by combining web scraping, AI-powered content generation, and smart template processing.
 
 ## Tech Stack
 
