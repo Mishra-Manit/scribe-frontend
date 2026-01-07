@@ -1,4 +1,4 @@
-import { API_BASE_URL } from "@/config/api";
+import { API_BASE_URL, SHOW_SHUTDOWN_NOTICE } from "@/config/api";
 import { z } from "zod";
 import { createLogger } from "@/utils/logger";
 import {
@@ -9,6 +9,7 @@ import {
   ServerError,
   AbortError,
   RateLimitError,
+  ServiceShutdownError,
 } from "./errors";
 import { withRetry, fetchWithTimeout } from "./retry";
 import { RequestCache } from "./deduplication";
@@ -192,6 +193,10 @@ export class ApiClient {
     endpoint: string,
     options: ApiRequestOptions = {}
   ): Promise<T> {
+    if (SHOW_SHUTDOWN_NOTICE) {
+      throw new ServiceShutdownError();
+    }
+
     const {
       retry,
       timeout = 60000, // 60 second default timeout

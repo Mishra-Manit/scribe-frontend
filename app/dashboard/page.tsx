@@ -180,62 +180,6 @@ export default function DashboardPage() {
               </div>
             </div>
             
-            {/* Auth Check Section
-            <div className="px-4 py-6 sm:px-0">
-              <Card className="border-2 border-blue-200 bg-blue-50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-blue-900">
-                    <Shield className="h-5 w-5" />
-                    Authentication Debug
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-sm text-blue-800">
-                    <p className="mb-2">
-                      <strong>Purpose:</strong> This button demonstrates the NEW Zustand-based auth implementation
-                      with instant synchronous token access. This is the same method used by the API client for all requests.
-                    </p>
-                    <p className="mb-2">
-                      <strong>How it works:</strong> Retrieves cached auth token from Zustand store (no async calls)
-                    </p>
-                    <p className="mb-4">
-                      <strong>Status:</strong> Supabase Ready = {supabaseReady ? '✅ Yes' : '❌ No'}
-                    </p>
-                    <p className="text-xs text-blue-600">
-                      💡 Check browser console for detailed auth store state and logs
-                    </p>
-                  </div>
-                  <Button
-                    onClick={handleAuthCheck}
-                    disabled={authCheckRunning}
-                    variant="outline"
-                    className="w-full border-blue-300 hover:bg-blue-100"
-                  >
-                    {authCheckRunning ? (
-                      <>
-                        <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-blue-600 border-r-transparent mr-2"></div>
-                        Running Auth Check...
-                      </>
-                    ) : (
-                      <>
-                        <Shield className="h-4 w-4 mr-2" />
-                        Run Auth Check
-                      </>
-                    )}
-                  </Button>
-                  {authCheckResult && (
-                    <div className={`p-3 rounded-md text-sm font-mono ${
-                      authCheckResult.startsWith('✅')
-                        ? 'bg-green-100 text-green-800 border border-green-300'
-                        : 'bg-red-100 text-red-800 border border-red-300'
-                    }`}>
-                      {authCheckResult}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div> */}
-
             {/* Email History Section */}
             <div className="px-4 py-6 sm:px-0">
               <div className="flex items-center justify-between mb-6">

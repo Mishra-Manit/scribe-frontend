@@ -46,6 +46,13 @@ export const ENVIRONMENT = process.env.NEXT_PUBLIC_ENVIRONMENT || 'DEVELOPMENT';
 export const isProduction = () => ENVIRONMENT === 'PRODUCTION';
 
 /**
+ * Feature flag to show shutdown notice across the app.
+ * When true: Landing page shows shutdown UI, dashboard redirects to landing.
+ * When false: Normal app behavior.
+ */
+export const SHOW_SHUTDOWN_NOTICE = true; // Set to false to disable
+
+/**
  * Helper to check if running in development
  */
 export const isDevelopment = () => ENVIRONMENT === 'DEVELOPMENT';

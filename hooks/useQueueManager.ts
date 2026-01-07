@@ -66,8 +66,10 @@ export function useQueueManager(): QueueManagerState {
   const processingRef = useRef(false);
   const processingLockRef = useRef<Promise<void> | null>(null);
 
-  // Check and reset daily counters if needed
-  checkAndResetDaily();
+  // Check and reset daily counters if needed (runs once on mount)
+  useEffect(() => {
+    checkAndResetDaily();
+  }, []); // Empty deps = run once on mount
 
   // Calculate queue stats
   const pendingCount = queue.filter(item => item.status === "pending").length;

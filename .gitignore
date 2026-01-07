@@ -25,6 +25,7 @@
 *.pem
 /supabase/
 /supabase/.temp/
+.sisyphus/
 
 # debug
 npm-debug.log*

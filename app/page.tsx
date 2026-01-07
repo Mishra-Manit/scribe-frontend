@@ -1,60 +1,48 @@
 "use client";
-import { useRouter } from "next/navigation"
-import React from "react"
-import { supabase } from "../config/supabase"
-import { useAuth } from "../context/AuthContextProvider"
+
+import { useRouter } from "next/navigation";
+import React from "react";
+import { supabase } from "../config/supabase";
+import { useAuth } from "../context/AuthContextProvider";
+import { SHOW_SHUTDOWN_NOTICE } from "@/config/api";
+import { ShutdownNotice } from "@/components/ShutdownNotice";
 
 export default function LandingPage() {
   const router = useRouter();
   const { user } = useAuth();
 
-  // Redirect if already logged in
   React.useEffect(() => {
+    if (SHOW_SHUTDOWN_NOTICE) return;
     if (user) {
       router.replace("/dashboard");
     }
   }, [user, router]);
 
-  // Temporary helper: log the user's access token for backend testing. Remove soon
-  React.useEffect(() => {
-    if (!user) return;
-
-    supabase.auth
-      .getSession()
-      .then(({ data, error }) => {
-        if (error) {
-          console.error("Failed to retrieve Supabase session", error);
-          return;
-        }
-
-        const token = data.session?.access_token;
-        if (token) {
-          console.log("Supabase JWT:", token);
-        } else {
-          console.warn("No active Supabase session found to extract a JWT.");
-        }
-      })
-      .catch((err) => {
-        console.error("Unexpected error while fetching Supabase session", err);
-      });
-  }, [user]);
-
   const loginWithGoogle = async () => {
+    if (SHOW_SHUTDOWN_NOTICE) return;
+    
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
-        }
+        },
       });
 
       if (error) {
         console.error("Error signing in with Google: ", error);
       }
-      // Note: After successful OAuth, AuthContextProvider will handle user initialization
     } catch (error) {
       console.error("Error signing in with Google: ", error);
     }
+  };
+
+  if (SHOW_SHUTDOWN_NOTICE) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black bg-grid-pattern">
+        <ShutdownNotice />
+      </div>
+    );
   }
 
   return (
@@ -117,5 +105,5 @@ export default function LandingPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

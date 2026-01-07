@@ -177,3 +177,21 @@ export class TimeoutError extends ApiError {
     return API_ERRORS.REQUEST_TIMEOUT.user;
   }
 }
+
+/**
+ * Service shutdown error (production service disabled)
+ *
+ * Indicates the service has been shut down in production.
+ * These errors are NOT retryable.
+ */
+export class ServiceShutdownError extends ApiError {
+  constructor() {
+    super("Service has been shut down", 503, "SERVICE_SHUTDOWN", false);
+    this.name = "ServiceShutdownError";
+    Object.setPrototypeOf(this, ServiceShutdownError.prototype);
+  }
+
+  getUserMessage(): string {
+    return "Service has been shut down due to server costs.";
+  }
+}

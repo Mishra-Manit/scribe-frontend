@@ -2,19 +2,18 @@
 
 import { useQueueManager } from '@/hooks/useQueueManager';
 import { UserInitError } from '@/components/UserInitError';
+import { SHOW_SHUTDOWN_NOTICE } from '@/config/api';
+import { redirect } from 'next/navigation';
 
-/**
- * Dashboard Layout Component
- *
- * This layout wraps all dashboard routes (/dashboard, /dashboard/generate, /dashboard/template)
- * and ensures the queue manager runs consistently across the entire dashboard section.
- */
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // Initialize queue manager once for all dashboard pages
+  if (SHOW_SHUTDOWN_NOTICE) {
+    redirect('/');
+  }
+
   useQueueManager();
 
   return (
