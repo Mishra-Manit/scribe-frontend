@@ -14,6 +14,7 @@ import { queryKeys } from "@/lib/query-keys";
 import logger from "@/utils/logger";
 import { QUEUE_ERRORS } from "@/constants/error-messages";
 import { toastService } from "@/lib/toast-service";
+import { ServiceShutdownError } from "@/lib/api/errors";
 
 interface QueueManagerState {
   // Current processing state
@@ -143,7 +144,10 @@ export function useQueueManager(): QueueManagerState {
         });
         failItem(nextItem.id, error instanceof Error ? error.message : QUEUE_ERRORS.UNKNOWN_ERROR.dev);
         incrementSessionFailed();
-        toastService.error(QUEUE_ERRORS.GENERATION_FAILED);
+        // Don't show toast for shutdown errors - the ShutdownNotice component handles this
+        if (!(error instanceof ServiceShutdownError)) {
+          toastService.error(QUEUE_ERRORS.GENERATION_FAILED);
+        }
 
         // Clear processing state
         setProcessing(null);

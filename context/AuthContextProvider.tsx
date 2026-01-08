@@ -6,6 +6,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { createLogger } from "@/utils/logger";
 import { AUTH_ERRORS } from "@/constants/error-messages";
 import { toastService } from "@/lib/toast-service";
+import { ServiceShutdownError } from "@/lib/api/errors";
 
 const logger = createLogger('AuthContext');
 
@@ -99,11 +100,17 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
             });
 
             if (mounted) {
-              const errorMessage = error.status === 401 || error.status === 403
-                ? AUTH_ERRORS.USER_INIT_FORBIDDEN.user
-                : error.message || AUTH_ERRORS.USER_INIT_FAILED.user;
-              setUserInitError(errorMessage);
-              toastService.errorMessage(errorMessage);
+              // Don't show toast for shutdown errors - the ShutdownNotice component handles this
+              if (error instanceof ServiceShutdownError) {
+                // Set a generic error but don't show toast
+                setUserInitError(error.getUserMessage());
+              } else {
+                const errorMessage = error.status === 401 || error.status === 403
+                  ? AUTH_ERRORS.USER_INIT_FORBIDDEN.user
+                  : error.message || AUTH_ERRORS.USER_INIT_FAILED.user;
+                setUserInitError(errorMessage);
+                toastService.errorMessage(errorMessage);
+              }
             }
           }
         } else {
@@ -181,11 +188,16 @@ export const AuthContextProvider = ({ children }: { children: React.ReactNode })
         userId: user.uid,
         error: error instanceof Error ? error.message : 'Unknown error'
       });
-      const errorMessage = error.status === 401 || error.status === 403
-        ? AUTH_ERRORS.USER_INIT_FORBIDDEN.user
-        : error.message || AUTH_ERRORS.USER_INIT_FAILED.user;
-      setUserInitError(errorMessage);
-      toastService.errorMessage(errorMessage);
+      // Don't show toast for shutdown errors - the ShutdownNotice component handles this
+      if (error instanceof ServiceShutdownError) {
+        setUserInitError(error.getUserMessage());
+      } else {
+        const errorMessage = error.status === 401 || error.status === 403
+          ? AUTH_ERRORS.USER_INIT_FORBIDDEN.user
+          : error.message || AUTH_ERRORS.USER_INIT_FAILED.user;
+        setUserInitError(errorMessage);
+        toastService.errorMessage(errorMessage);
+      }
     }
   };
 
