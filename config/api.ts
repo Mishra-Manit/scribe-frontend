@@ -50,7 +50,7 @@ export const isProduction = () => ENVIRONMENT === 'PRODUCTION';
  * When true: Landing page shows shutdown UI, dashboard redirects to landing.
  * When false: Normal app behavior.
  */
-export const SHOW_SHUTDOWN_NOTICE = isProduction();
+export const SHOW_SHUTDOWN_NOTICE = false;
 
 /**
  * Helper to check if running in development
