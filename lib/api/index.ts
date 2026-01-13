@@ -99,6 +99,34 @@ export const userAPI = {
       }
     );
   },
+
+  /**
+   * Mark onboarding as complete
+   *
+   * Marks the current user as having completed the onboarding welcome screen.
+   * This prevents the welcome screen from appearing again.
+   *
+   * @param options - Request options
+   * @returns Updated user profile with onboarded = true
+   *
+   * @example
+   * // With React Mutation
+   * const mutation = useMutation({
+   *   mutationFn: () => api.user.completeOnboarding()
+   * });
+   */
+  completeOnboarding: async (
+    options?: ApiRequestOptions
+  ): Promise<UserProfileWithCount> => {
+    return apiClient.requestWithValidation(
+      "/api/user/onboarding",
+      UserProfileWithCountSchema,
+      {
+        method: "PATCH",
+        ...options,
+      }
+    );
+  },
 };
 
 /**

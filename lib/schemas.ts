@@ -92,6 +92,7 @@ export const UserProfileSchema = z.object({
   email: z.string().email(),
   display_name: z.string().nullable(),
   generation_count: z.number().int().nonnegative(),
+  onboarded: z.boolean(),
   created_at: z.string().datetime(),
 });
 export type UserProfile = z.infer<typeof UserProfileSchema>;

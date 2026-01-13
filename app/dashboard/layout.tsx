@@ -2,8 +2,13 @@
 
 import { useQueueManager } from '@/hooks/useQueueManager';
 import { UserInitError } from '@/components/UserInitError';
+import { WelcomeScreen } from '@/components/WelcomeScreen';
 import { SHOW_SHUTDOWN_NOTICE } from '@/config/api';
 import { redirect } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { queryKeys } from '@/lib/query-keys';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function DashboardLayout({
   children,
@@ -16,9 +21,20 @@ export default function DashboardLayout({
 
   useQueueManager();
 
+  const { user, supabaseReady } = useAuth();
+
+  const { data: userProfile } = useQuery({
+    queryKey: queryKeys.user.profile(),
+    queryFn: () => api.template.getUserProfile(),
+    enabled: !!user?.uid && supabaseReady,
+  });
+
+  const showWelcome = userProfile?.onboarded === false;
+
   return (
     <>
       <UserInitError />
+      <WelcomeScreen isOpen={showWelcome} />
       {children}
     </>
   );
