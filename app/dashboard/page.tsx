@@ -206,7 +206,7 @@ export default function DashboardPage() {
                   ) : (
                     <>
                       <Download className="h-4 w-4 mr-2" />
-                      Export CSV
+                      Export Excel
                     </>
                   )}
                 </Button>
