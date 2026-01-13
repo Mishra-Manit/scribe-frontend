@@ -15,46 +15,49 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="border-b border-gray-200 bg-white">
+    <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-white/20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
-            <Link href="/dashboard" className="flex-shrink-0">
-              <h1 className="text-xl font-bold text-black">
+            <Link href="/dashboard" className="flex-shrink-0 flex items-center gap-2">
+              <h1 className="text-xl font-bold text-black tracking-tight">
                 scribe
               </h1>
             </Link>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <Link
-                href="/dashboard"
-                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/dashboard/generate"
-                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-              >
-                Generate Emails
-              </Link>
-              <Link
-                href="/dashboard/template"
-                className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
-              >
-                Make Template
-              </Link>
+            <div className="hidden sm:ml-8 sm:flex sm:space-x-1">
+              <NavLink href="/dashboard">Dashboard</NavLink>
+              <NavLink href="/dashboard/generate">Generate</NavLink>
+              <NavLink href="/dashboard/template">Templates</NavLink>
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-gray-700">
-              Welcome, {user?.displayName || "Guest"}
+            <span className="text-sm text-gray-500 font-medium">
+              {user?.displayName || "Guest"}
             </span>
-            <Button variant="outline" onClick={handleLogout} className="text-black border-black hover:bg-black hover:text-white">
+            <Button 
+              variant="outline" 
+              onClick={handleLogout} 
+              size="sm"
+              className="text-gray-600 border-gray-200 hover:bg-gray-50 hover:text-black transition-all"
+            >
               Logout
             </Button>
           </div>
         </div>
       </div>
     </nav>
+  );
+}
+
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  const router = useRouter();
+  
+  return (
+    <Link
+      href={href}
+      className="text-gray-500 hover:text-black hover:bg-black/5 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200"
+    >
+      {children}
+    </Link>
   );
 } 

@@ -16,6 +16,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { FadeIn } from "@/components/motion/FadeIn";
+import { SlideIn } from "@/components/motion/SlideIn";
+import { ScaleIn } from "@/components/motion/ScaleIn";
+import { Loader2, Copy, FileText, CheckCircle2, History } from "lucide-react";
 
 const MAX_TEMPLATES = 5;
 
@@ -85,7 +89,7 @@ export default function TemplateGenerationPage() {
 
       // Scroll to result
       setTimeout(() => {
-        generatedTemplateRef.current?.scrollIntoView({ behavior: 'smooth' });
+        generatedTemplateRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
     },
     onError: (error) => {
@@ -156,170 +160,193 @@ export default function TemplateGenerationPage() {
       console.log("[Template] Generation complete");
     } catch (error) {
       // Errors handled in mutation callbacks
-      // Resume stays in storage for retry (per user requirement)
       console.error("[Template] Submit failed:", error);
     }
   };
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50/50 pb-12">
         <Navbar />
 
-        <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">
-              Create Email Template
-            </h1>
-            <p className="text-sm text-gray-600">
-              {templatesRemaining} of {MAX_TEMPLATES} templates remaining
-            </p>
-          </div>
+        <div className="max-w-4xl mx-auto pt-24 px-4 sm:px-6 lg:px-8">
+          <FadeIn>
+            <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+                  Create Email Template
+                </h1>
+                <p className="text-gray-500 mt-2">
+                  Generate a custom email template based on your resume and goals.
+                </p>
+              </div>
+              <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm text-sm">
+                <span className="font-semibold text-gray-900">{templatesRemaining}</span>
+                <span className="text-gray-500"> of {MAX_TEMPLATES} templates remaining</span>
+              </div>
+            </div>
+          </FadeIn>
 
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="text-xl">
-                Upload Resume and Instructions
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <FileUploader
-                  onFileSelected={handleFileSelected}
-                  onError={setError}
-                  disabled={isGenerating || isLimitReached}
-                />
+          <div className="space-y-8">
+            <ScaleIn delay={0.1}>
+              <Card className="border-none shadow-[0_2px_10px_-2px_rgba(0,0,0,0.1)]">
+                <CardHeader>
+                  <CardTitle className="text-lg font-medium text-gray-900">
+                    Upload Resume & Instructions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="bg-gray-50/50 p-4 rounded-xl border border-dashed border-gray-200 hover:border-gray-300 transition-colors">
+                      <FileUploader
+                        onFileSelected={handleFileSelected}
+                        onError={setError}
+                        disabled={isGenerating || isLimitReached}
+                      />
+                    </div>
 
-                <div>
-                  <Label htmlFor="instructions" className="block text-sm font-medium text-gray-700 mb-1">
-                    Instructions for Template Generation
-                  </Label>
-                  <Textarea
-                    id="instructions"
-                    placeholder="e.g., Focus on my ML research for academic positions. Keep it warm and professional."
-                    className="w-full resize-y text-gray-900 border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                    value={instructions}
-                    onChange={(e) => setInstructions(e.target.value)}
-                    rows={6}
-                    disabled={isGenerating || isLimitReached}
-                  />
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="instructions" className="text-gray-700 font-medium">
+                        Custom Instructions
+                      </Label>
+                      <Textarea
+                        id="instructions"
+                        placeholder="e.g., Focus on my ML research for academic positions. Keep it warm and professional. Mention my paper on transformers."
+                        className="min-h-[120px] resize-y bg-gray-50/50 border-gray-200 focus:bg-white transition-all"
+                        value={instructions}
+                        onChange={(e) => setInstructions(e.target.value)}
+                        disabled={isGenerating || isLimitReached}
+                      />
+                    </div>
 
-                {error && (
-                  <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                    <p className="text-sm text-red-600">{error}</p>
-                  </div>
-                )}
+                    {error && (
+                      <FadeIn>
+                        <div className="bg-red-50 border border-red-100 rounded-lg p-4 text-sm text-red-600 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                          {error}
+                        </div>
+                      </FadeIn>
+                    )}
 
-                {isGenerating && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
-                    <p className="text-sm text-blue-600">
-                      {uploadMutation.isPending && "Uploading resume..."}
-                      {generateMutation.isPending && "Generating template... This may take 5-15 seconds."}
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex justify-center">
-                  <Button
-                    type="submit"
-                    className="w-full sm:w-auto"
-                    disabled={isGenerating || isLimitReached || !supabaseReady}
-                  >
-                    {isGenerating
-                      ? uploadMutation.isPending
-                        ? "Uploading Resume..."
-                        : "Generating Template..."
-                      : isLimitReached
-                      ? "Template Limit Reached"
-                      : `Generate Template (${templatesRemaining} ${
-                          templatesRemaining === 1 ? "use" : "uses"
-                        } left)`}
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-
-          {generatedTemplate && (
-            <Card ref={generatedTemplateRef}>
-              <CardHeader>
-                <CardTitle className="text-xl">Generated Email Template</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  readOnly
-                  value={generatedTemplate}
-                  className="w-full resize-y text-gray-900 bg-gray-100 border-gray-300 rounded-md"
-                  rows={15}
-                />
-                <div className="mt-4 flex justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      navigator.clipboard.writeText(generatedTemplate);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 2000);
-                    }}
-                  >
-                    {copied ? "Copied!" : "Copy Template"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="mt-8">
-            <h2 className="text-3xl font-semibold text-gray-900 mb-4">Template History</h2>
-
-            {isTemplatesLoading ? (
-              <Card>
-                <CardContent className="py-12">
-                  <p className="text-center text-gray-600">Loading templates...</p>
-                </CardContent>
-              </Card>
-            ) : templates && templates.length > 0 ? (
-              <div className="grid gap-6">
-                {templates.map((template) => (
-                  <Card key={template.id}>
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg">
-                            Template from {new Date(template.created_at).toLocaleDateString()}
-                          </CardTitle>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {template.user_instructions}
+                    {isGenerating && (
+                      <FadeIn>
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 flex items-center gap-3">
+                          <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                          <p className="text-sm text-blue-700">
+                            {uploadMutation.isPending && "Uploading resume..."}
+                            {generateMutation.isPending && "Analyzing resume and generating template (this takes 5-15s)..."}
                           </p>
                         </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            navigator.clipboard.writeText(template.template_text);
-                          }}
-                        >
-                          Copy Template
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="bg-gray-50 p-4 rounded-md">
-                        <p className="text-sm text-gray-800 whitespace-pre-wrap">
-                          {template.template_text}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <p className="text-gray-600 mb-4">No templates yet.</p>
+                      </FadeIn>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className="w-full shadow-lg shadow-blue-900/5"
+                      disabled={isGenerating || isLimitReached || !supabaseReady}
+                    >
+                      {isGenerating
+                        ? "Processing..."
+                        : isLimitReached
+                        ? "Limit Reached"
+                        : "Generate Template"}
+                    </Button>
+                  </form>
                 </CardContent>
               </Card>
+            </ScaleIn>
+
+            {generatedTemplate && (
+              <ScaleIn delay={0.2}>
+                <div ref={generatedTemplateRef}>
+                  <Card className="border-green-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] overflow-hidden">
+                    <div className="bg-green-50/50 border-b border-green-100 px-6 py-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-green-800 font-medium">
+                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                        Template Generated Successfully
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-green-700 hover:text-green-800 hover:bg-green-100"
+                        onClick={() => {
+                          navigator.clipboard.writeText(generatedTemplate);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                      >
+                        {copied ? (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-4 w-4 mr-2" />
+                            Copy Text
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <CardContent className="p-0">
+                      <Textarea
+                        readOnly
+                        value={generatedTemplate}
+                        className="w-full min-h-[400px] resize-y border-0 rounded-none focus:ring-0 p-6 font-mono text-sm leading-relaxed text-gray-700 bg-white"
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+              </ScaleIn>
             )}
+
+            <SlideIn delay={0.3}>
+              <div className="mt-8">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900 mb-4">
+                  <History className="h-5 w-5 text-gray-400" />
+                  History
+                </h2>
+
+                {isTemplatesLoading ? (
+                  <div className="flex justify-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-gray-300" />
+                  </div>
+                ) : templates && templates.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {templates.map((template) => (
+                      <Card key={template.id} className="group hover:shadow-md transition-all duration-200 border-gray-100">
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="text-xs font-medium text-gray-400">
+                              {new Date(template.created_at).toLocaleDateString()}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => navigator.clipboard.writeText(template.template_text)}
+                            >
+                              <Copy className="h-3 w-3 text-gray-500" />
+                            </Button>
+                          </div>
+                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+                            {template.user_instructions}
+                          </p>
+                          <div className="bg-gray-50 p-3 rounded text-xs text-gray-600 font-mono line-clamp-6 leading-relaxed">
+                            {template.template_text}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-gray-50/50 rounded-lg border border-dashed border-gray-200">
+                    <FileText className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No templates yet</p>
+                  </div>
+                )}
+              </div>
+            </SlideIn>
           </div>
         </div>
       </div>

@@ -8,7 +8,9 @@
 import { useQueueState } from "@/hooks/useQueueState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function QueueStatus() {
+import { cn } from "@/lib/utils";
+
+export function QueueStatus({ className }: { className?: string }) {
   const {
     currentTaskStatus,
     pendingCount,
@@ -18,10 +20,13 @@ export function QueueStatus() {
   } = useQueueState();
 
   return (
-    <Card>
+    <Card className={cn(
+      "h-full border-none shadow-[0_2px_10px_-2px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] transition-all duration-300",
+      className
+    )}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-sm font-medium">
+          <CardTitle className="text-sm font-medium text-gray-500">
             Emails in Queue
           </CardTitle>
           <span className="text-xs text-blue-600 flex items-center gap-1">
@@ -45,7 +50,7 @@ export function QueueStatus() {
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth="2"
-          className="h-4 w-4 text-muted-foreground"
+          className="h-4 w-4 text-gray-400"
         >
           <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
         </svg>
