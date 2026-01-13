@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { emailAPI } from "@/lib/api";
 import { EmailResponse } from "@/lib/schemas";
-import { convertEmailsToCSV, downloadCSV } from "@/lib/csv-utils";
+import { convertEmailsToExcel, downloadExcel } from "@/lib/excel-utils";
 
 interface UseEmailExportReturn {
   isExporting: boolean;
@@ -10,7 +10,7 @@ interface UseEmailExportReturn {
 }
 
 /**
- * Hook for exporting all emails as CSV
+ * Hook for exporting all emails as Excel
  * Handles pagination and error handling
  */
 export function useEmailExport(): UseEmailExportReturn {
@@ -79,10 +79,10 @@ export function useEmailExport(): UseEmailExportReturn {
         return;
       }
 
-      // Generate CSV and trigger download
-      const csvContent = convertEmailsToCSV(allEmails);
+      // Generate Excel and trigger download
+      const workbook = convertEmailsToExcel(allEmails);
       const timestamp = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-      downloadCSV(csvContent, `email-history-${timestamp}.csv`);
+      downloadExcel(workbook, `email-history-${timestamp}.xlsx`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Export failed");
     } finally {
