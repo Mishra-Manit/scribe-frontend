@@ -127,6 +127,36 @@ export const userAPI = {
       }
     );
   },
+
+  /**
+   * Update user's email template
+   *
+   * Updates the user's saved email template for generation.
+   *
+   * @param template - The email template text to save
+   * @param options - Request options
+   * @returns Updated user profile with email_template
+   *
+   * @example
+   * // With React Mutation
+   * const mutation = useMutation({
+   *   mutationFn: (template: string) => api.user.updateTemplate(template)
+   * });
+   */
+  updateTemplate: async (
+    template: string,
+    options?: ApiRequestOptions
+  ): Promise<UserProfile> => {
+    return apiClient.requestWithValidation(
+      "/api/user/template",
+      UserProfileSchema,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ template }),
+        ...options,
+      }
+    );
+  },
 };
 
 /**

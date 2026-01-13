@@ -81,8 +81,8 @@ export const useUIStore = create<UIState>()(
       storage: createJSONStorage(() => localStorage),
 
       // Only persist these fields (not hover/copied state or hydration flag)
+      // Note: emailTemplate is NOT persisted - it's stored in database only
       partialize: (state) => ({
-        emailTemplate: state.emailTemplate,
         recipientName: state.recipientName,
         recipientInterest: state.recipientInterest,
       }),

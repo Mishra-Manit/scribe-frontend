@@ -93,6 +93,7 @@ export const UserProfileSchema = z.object({
   display_name: z.string().nullable(),
   generation_count: z.number().int().nonnegative(),
   onboarded: z.boolean(),
+  email_template: z.string().nullable(),
   created_at: z.string().datetime(),
 });
 export type UserProfile = z.infer<typeof UserProfileSchema>;
@@ -132,3 +133,21 @@ export const UserProfileWithCountSchema = UserProfileSchema.extend({
   template_count: z.number().int().nonnegative(),
 });
 export type UserProfileWithCount = z.infer<typeof UserProfileWithCountSchema>;
+
+/**
+ * Template update validation schema - PATCH /api/user/template
+ *
+ * Matches backend constraints from schemas/auth.py TemplateUpdate:
+ * - 1-10,000 characters
+ * - Cannot be whitespace-only
+ */
+export const TemplateUpdateSchema = z.object({
+  template: z
+    .string()
+    .min(1, "Template cannot be empty")
+    .max(10000, "Template too long (max 10,000 characters)")
+    .refine((val) => val.trim().length > 0, {
+      message: "Template cannot be empty or whitespace only",
+    }),
+});
+export type TemplateUpdate = z.infer<typeof TemplateUpdateSchema>;
