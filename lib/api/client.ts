@@ -142,8 +142,14 @@ export class ApiClient {
     // Handle authentication errors
     if (response.status === 401 || response.status === 403) {
       const errorData = await response.json().catch(() => ({}));
+
+      let errorMessage = errorData.message || errorData.detail;
+      if (typeof errorMessage === 'object') {
+        errorMessage = JSON.stringify(errorMessage);
+      }
+
       throw new AuthenticationError(
-        errorData.message || errorData.detail || AUTH_ERRORS.TOKEN_INVALID.dev,
+        errorMessage || AUTH_ERRORS.TOKEN_INVALID.dev,
         response.status
       );
     }
@@ -151,18 +157,28 @@ export class ApiClient {
     // Handle validation errors
     if (response.status === 400) {
       const errorData = await response.json().catch(() => ({}));
+
+      let errorMessage = errorData.message || errorData.detail;
+      if (typeof errorMessage === 'object') {
+        errorMessage = JSON.stringify(errorMessage);
+      }
+
       throw new ValidationError(
-        errorData.message || errorData.detail || API_ERRORS.VALIDATION.dev
+        errorMessage || API_ERRORS.VALIDATION.dev
       );
     }
 
     // Handle server errors
     if (response.status >= 500) {
       const errorData = await response.json().catch(() => ({}));
+
+      let errorMessage = errorData.message || errorData.detail;
+      if (typeof errorMessage === 'object') {
+        errorMessage = JSON.stringify(errorMessage);
+      }
+
       throw new ServerError(
-        errorData.message ||
-          errorData.detail ||
-          `${API_ERRORS.SERVER_ERROR.dev}: ${response.statusText}`,
+        errorMessage || `${API_ERRORS.SERVER_ERROR.dev}: ${response.statusText}`,
         response.status
       );
     }
@@ -170,10 +186,15 @@ export class ApiClient {
     // Handle other non-OK responses
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+
+      let errorMessage = errorData.message || errorData.detail;
+
+      if (typeof errorMessage === 'object') {
+        errorMessage = JSON.stringify(errorMessage);
+      }
+
       throw new ApiError(
-        errorData.message ||
-          errorData.detail ||
-          `${API_ERRORS.UNKNOWN.dev}: ${response.statusText}`,
+        errorMessage || `${API_ERRORS.UNKNOWN.dev}: ${response.statusText}`,
         response.status
       );
     }

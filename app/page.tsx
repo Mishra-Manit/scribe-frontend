@@ -22,7 +22,7 @@ export default function LandingPage() {
 
   const loginWithGoogle = async () => {
     if (SHOW_SHUTDOWN_NOTICE) return;
-    
+
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -88,11 +88,11 @@ export default function LandingPage() {
             </button>
           </div>
         </FadeIn>
-        
+
         <FadeIn delay={0.6}>
           <div className="mt-8 pt-8 border-t border-white/5">
             <p className="text-gray-600 text-sm">
-              Trusted by students from top universities worldwide
+              Trusted by students in top university labs at Stanford, Harvard, and UC Berkeley
             </p>
           </div>
         </FadeIn>
