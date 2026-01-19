@@ -1,23 +1,24 @@
 /**
  * Queue Status Component
- * Simple, clean display of queue processing status
+ * Displays queue processing status from server data
  */
 
 "use client";
 
-import { useQueueState } from "@/hooks/useQueueState";
+import { useQueueManager } from "@/hooks/useQueueManager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
 import { cn } from "@/lib/utils";
 
 export function QueueStatus({ className }: { className?: string }) {
   const {
-    currentTaskStatus,
+    currentItem,
     pendingCount,
-    isProcessing,
+    processingCount,
     completedCount,
     failedCount,
-  } = useQueueState();
+  } = useQueueManager();
+
+  const isProcessing = processingCount > 0;
 
   return (
     <Card className={cn(
@@ -30,10 +31,10 @@ export function QueueStatus({ className }: { className?: string }) {
             Emails in Queue
           </CardTitle>
           <span className="text-xs text-blue-600 flex items-center gap-1">
-            {isProcessing && currentTaskStatus ? (
+            {isProcessing && currentItem ? (
               <>
                 <span className="inline-block w-1.5 h-1.5 bg-blue-600 rounded-full animate-pulse" />
-                {currentTaskStatus.result?.current_step?.replace(/_/g, ' ') || 'Processing...'}
+                {currentItem.current_step?.replace(/_/g, ' ') || 'Processing...'}
               </>
             ) : pendingCount > 0 ? (
               '• In queue'

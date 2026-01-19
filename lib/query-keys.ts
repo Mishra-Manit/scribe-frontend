@@ -79,6 +79,15 @@ export const queryKeys = {
     detail: (templateId: string) =>
       [...queryKeys.templates.all, 'detail', templateId] as const,
   },
+
+  // Queue domain keys (database-backed batch queue)
+  queue: {
+    // Base key for all queue queries
+    all: ['queue'] as const,
+
+    // Queue items for current user
+    items: () => [...queryKeys.queue.all, 'items'] as const,
+  },
 } as const;
 
 // Type helper for query key inference

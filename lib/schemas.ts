@@ -151,3 +151,60 @@ export const TemplateUpdateSchema = z.object({
     }),
 });
 export type TemplateUpdate = z.infer<typeof TemplateUpdateSchema>;
+
+// ============================================================================
+// Queue Schemas
+// ============================================================================
+
+/**
+ * Queue item status enum
+ */
+export const QueueStatusSchema = z.enum(["pending", "processing", "completed", "failed"]);
+export type QueueStatus = z.infer<typeof QueueStatusSchema>;
+
+/**
+ * Queue item response schema - GET /api/queue/
+ */
+export const QueueItemSchema = z.object({
+  id: z.string().uuid(),
+  recipient_name: z.string(),
+  status: QueueStatusSchema,
+  position: z.number().int().positive().nullable(),
+  email_id: z.string().uuid().nullable(),
+  error_message: z.string().nullable(),
+  current_step: z.string().nullable(),
+  created_at: z.string().datetime(),
+});
+export type QueueItem = z.infer<typeof QueueItemSchema>;
+
+/**
+ * Queue items list schema - GET /api/queue/
+ */
+export const QueueItemsSchema = z.array(QueueItemSchema);
+export type QueueItems = z.infer<typeof QueueItemsSchema>;
+
+/**
+ * Batch submit request schema - POST /api/queue/batch
+ */
+export const BatchItemSchema = z.object({
+  recipient_name: z.string().min(2, "Name must be at least 2 characters"),
+  recipient_interest: z.string().min(2, "Interest must be at least 2 characters"),
+});
+export type BatchItem = z.infer<typeof BatchItemSchema>;
+
+/**
+ * Batch submit response schema - POST /api/queue/batch
+ */
+export const BatchSubmitResponseSchema = z.object({
+  queue_item_ids: z.array(z.string().uuid()),
+  message: z.string(),
+});
+export type BatchSubmitResponse = z.infer<typeof BatchSubmitResponseSchema>;
+
+/**
+ * Cancel queue item response schema - DELETE /api/queue/{id}
+ */
+export const CancelQueueItemResponseSchema = z.object({
+  message: z.string(),
+});
+export type CancelQueueItemResponse = z.infer<typeof CancelQueueItemResponseSchema>;

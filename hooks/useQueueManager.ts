@@ -1,297 +1,143 @@
 /**
- * Simple Queue Manager - The single hook that manages everything
+ * Database-Backed Queue Manager
+ *
+ * Simplified queue management hook that uses the database as the source of truth.
+ * Replaces the localStorage-based implementation with server-driven state.
  */
 
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useSimpleQueueStore } from "@/stores/simple-queue-store";
 import { useEmailTemplate } from "@/stores/ui-store";
-import { emailAPI, type TaskStatusResponse } from "@/lib/api";
+import { queueAPI, type QueueItem, type BatchItem } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
-import logger from "@/utils/logger";
-import { QUEUE_ERRORS } from "@/constants/error-messages";
 import { toastService } from "@/lib/toast-service";
-import { ServiceShutdownError } from "@/lib/api/errors";
+import logger from "@/utils/logger";
+import { useQueueCompletionWatcher } from "./useQueueCompletionWatcher";
 
-interface QueueManagerState {
-  // Current processing state
-  currentTaskId: string | null;
-  currentTaskStatus: TaskStatusResponse | null;
-  isProcessing: boolean;
-  
-  // Queue stats
+export interface QueueManagerState {
+  // Queue data from server
+  queueItems: QueueItem[];
+  isLoading: boolean;
+
+  // Computed stats
   pendingCount: number;
+  processingCount: number;
   completedCount: number;
   failedCount: number;
-  
+
+  // Current processing item (if any)
+  currentItem: QueueItem | null;
+
   // Actions
-  addToQueue: (items: Array<{name: string; interest: string}>) => void;
-  clearQueue: () => void;
+  submitBatch: (items: Array<{ name: string; interest: string }>) => Promise<void>;
+  cancelItem: (id: string) => Promise<void>;
 }
 
 /**
- * The main queue manager hook
- * This is the single source of truth for queue management
+ * Server-driven queue manager hook
+ *
+ * Features:
+ * - Polls /api/queue/ every 2 seconds when items are pending/processing
+ * - Database is the single source of truth
+ * - No localStorage persistence needed
+ * - Automatic cache invalidation on mutations
  */
 export function useQueueManager(): QueueManagerState {
   const { user, supabaseReady } = useAuth();
-  const queryClient = useQueryClient();
   const emailTemplate = useEmailTemplate();
-  
-  // Store actions and state
+  const queryClient = useQueryClient();
+
+  // Poll queue status from server
   const {
-    queue,
-    isProcessing,
-    addItems,
-    startProcessing,
-    completeItem,
-    failItem,
-    removeItem,
-    clearQueue,
-    setProcessing,
-    setCurrentTaskStatus,
-    getNextPending,
-    getProcessingItem,
-    incrementSessionCompleted,
-    incrementSessionFailed,
-    checkAndResetDaily,
-    sessionCompletedCount,
-    sessionFailedCount,
-  } = useSimpleQueueStore();
-
-  // Local state for current processing
-  const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
-  const processingRef = useRef(false);
-  const processingLockRef = useRef<Promise<void> | null>(null);
-
-  // Check and reset daily counters if needed (runs once on mount)
-  useEffect(() => {
-    checkAndResetDaily();
-  }, []); // Empty deps = run once on mount
-
-  // Calculate queue stats
-  const pendingCount = queue.filter(item => item.status === "pending").length;
-  
-  // Poll task status when we have a task ID
-  const { data: taskStatus } = useQuery({
-    queryKey: currentTaskId ? queryKeys.tasks.status(currentTaskId) : ['task-disabled'],
-    queryFn: () => emailAPI.getTaskStatus(currentTaskId!),
-    enabled: !!currentTaskId,
+    data: queueItems = [],
+    isLoading,
+  } = useQuery({
+    queryKey: queryKeys.queue.items(),
+    queryFn: ({ signal }) => queueAPI.getQueueItems({ signal }),
+    enabled: !!user?.uid && supabaseReady,
     refetchInterval: (query) => {
-      const status = query.state.data?.status;
-      // Stop polling when complete
-      if (status === "SUCCESS" || status === "FAILURE") {
-        return false;
+      // Only poll if there are pending/processing items
+      const items = query.state.data || [];
+      const hasActive = items.some(
+        (i) => i.status === "pending" || i.status === "processing"
+      );
+      return hasActive ? 2000 : false; // Poll every 2s if active, otherwise stop
+    },
+    staleTime: 1000, // Consider data fresh for 1 second
+  });
+
+  // Batch submission mutation
+  const submitMutation = useMutation({
+    mutationFn: async (items: BatchItem[]) => {
+      if (!emailTemplate) {
+        throw new Error("Email template is required");
       }
-      return 2000; // Poll every 2 seconds
+      return queueAPI.submitBatch(items, emailTemplate);
+    },
+    onSuccess: (data) => {
+      logger.info(`[Queue] Submitted ${data.queue_item_ids.length} items`);
+      toastService.success(`Added ${data.queue_item_ids.length} items to queue`);
+
+      // Invalidate queue items to show new items
+      queryClient.invalidateQueries({ queryKey: queryKeys.queue.items() });
+    },
+    onError: (error) => {
+      logger.error("[Queue] Batch submission failed", { error });
+      toastService.errorMessage("Failed to add items to queue");
     },
   });
-  
-  // Process next item in queue
-  const processNextItem = async () => {
-    // MUTEX LOCK: If another call is already processing, return immediately
-    if (processingLockRef.current) {
-      logger.debug("[Queue] Processing lock held, skipping duplicate call");
-      return;
-    }
 
-    // Double-check processing state
-    if (isProcessing || processingRef.current) {
-      logger.debug("[Queue] Already processing, skipping");
-      return;
-    }
+  // Cancel item mutation
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => queueAPI.cancelItem(id),
+    onSuccess: () => {
+      logger.info("[Queue] Item cancelled");
+      // Invalidate queue items to remove cancelled item
+      queryClient.invalidateQueries({ queryKey: queryKeys.queue.items() });
+    },
+    onError: (error) => {
+      logger.error("[Queue] Cancel failed", { error });
+      toastService.errorMessage("Failed to cancel queue item");
+    },
+  });
 
-    // Check prerequisites
-    if (!user?.uid || !emailTemplate || !supabaseReady) {
-      logger.debug("[Queue] Prerequisites not met");
-      return;
-    }
+  // Computed values from server data
+  const pendingCount = queueItems.filter((i) => i.status === "pending").length;
+  const processingCount = queueItems.filter((i) => i.status === "processing").length;
+  const completedCount = queueItems.filter((i) => i.status === "completed").length;
+  const failedCount = queueItems.filter((i) => i.status === "failed").length;
+  const currentItem = queueItems.find((i) => i.status === "processing") || null;
 
-    // Get next pending item
-    const nextItem = getNextPending();
-    if (!nextItem) {
-      logger.debug("[Queue] No pending items");
-      return;
-    }
-
-    logger.info(`[Queue] Starting processing for: ${nextItem.recipientName}`);
-
-    // Create and acquire lock
-    const lockPromise = (async () => {
-      // Set processing state atomically
-      setProcessing(nextItem.id);
-      processingRef.current = true;
-
-      try {
-        // Start email generation
-        const response = await emailAPI.generateEmail({
-          email_template: emailTemplate,
-          recipient_name: nextItem.recipientName,
-          recipient_interest: nextItem.recipientInterest,
-        });
-
-        // Update queue item with task ID
-        startProcessing(nextItem.id, response.task_id);
-        setCurrentTaskId(response.task_id);
-        logger.info(`[Queue] Started task ${response.task_id} for ${nextItem.recipientName}`);
-
-      } catch (error) {
-        logger.error(QUEUE_ERRORS.GENERATION_START_FAILED.dev, {
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
-        failItem(nextItem.id, error instanceof Error ? error.message : QUEUE_ERRORS.UNKNOWN_ERROR.dev);
-        incrementSessionFailed();
-        // Don't show toast for shutdown errors - the ShutdownNotice component handles this
-        if (!(error instanceof ServiceShutdownError)) {
-          toastService.error(QUEUE_ERRORS.GENERATION_FAILED);
-        }
-
-        // Clear processing state
-        setProcessing(null);
-        processingRef.current = false;
-        setCurrentTaskStatus(null);
-
-        // Try next item after delay
-        setTimeout(() => {
-          processingLockRef.current = null; // Release lock
-          processNextItem();
-        }, 1000);
-      }
-    })();
-
-    processingLockRef.current = lockPromise;
-    await lockPromise;
-    processingLockRef.current = null;
-  };
-  
-  // Update store with task status for display components
-  useEffect(() => {
-    if (taskStatus) {
-      setCurrentTaskStatus(taskStatus);
-    }
-  }, [taskStatus, setCurrentTaskStatus]);
-
-  // Handle task completion/failure
-  useEffect(() => {
-    if (!taskStatus || !currentTaskId) return;
-
-    const processingItem = getProcessingItem();
-    if (!processingItem) return;
-
-    if (taskStatus.status === "SUCCESS" && taskStatus.result?.email_id) {
-      logger.info(`[Queue] Task ${currentTaskId} completed successfully for ${processingItem.recipientName}`);
-
-      // Mark as completed and increment session counter
-      completeItem(processingItem.id);
-      incrementSessionCompleted();
-
-      // Invalidate email history queries to show new email
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.emails.infiniteAll()  // Invalidates all infinite queries
-      });
-
-      // Invalidate user profile to update generation_count
-      queryClient.invalidateQueries({
-        queryKey: queryKeys.user.profile()
-      });
-
-      // Remove from queue after delay
-      setTimeout(() => {
-        removeItem(processingItem.id);
-      }, 2000);
-
-      // Reset state
-      setCurrentTaskId(null);
-      setProcessing(null);
-      processingRef.current = false;
-      setCurrentTaskStatus(null);
-
-      // CRITICAL: Use setTimeout to ensure state updates complete before next processing
-      // This prevents the auto-start effect from firing prematurely
-      setTimeout(() => {
-        processingLockRef.current = null; // Release lock
-        logger.debug("[Queue] Processing next item after success");
-        processNextItem(); // Process next item
-      }, 500);
-
-    } else if (taskStatus.status === "FAILURE") {
-      logger.info(QUEUE_ERRORS.TASK_FAILED.dev, {
-        taskId: currentTaskId,
-        recipientName: processingItem.recipientName,
-        error: taskStatus.error
-      });
-
-      // Mark as failed and increment session counter
-      const errorMessage = typeof taskStatus.error === 'string'
-        ? taskStatus.error
-        : taskStatus.error?.message || QUEUE_ERRORS.TASK_FAILED.dev;
-      failItem(processingItem.id, errorMessage);
-      incrementSessionFailed();
-      toastService.error(QUEUE_ERRORS.GENERATION_FAILED);
-
-      // Remove from queue after delay
-      setTimeout(() => {
-        removeItem(processingItem.id);
-      }, 3000);
-
-      // Reset state
-      setCurrentTaskId(null);
-      setProcessing(null);
-      processingRef.current = false;
-      setCurrentTaskStatus(null);
-
-      // CRITICAL: Same pattern for failures
-      setTimeout(() => {
-        processingLockRef.current = null; // Release lock
-        logger.debug("[Queue] Processing next item after failure");
-        processNextItem();
-      }, 1000);
-    }
-  }, [taskStatus, currentTaskId]);
-
-  // Recovery: Check for stuck processing items on mount
-  useEffect(() => {
-    const processingItem = getProcessingItem();
-    if (processingItem && processingItem.taskId) {
-      // Resume polling for existing task
-      logger.info(`[Queue] Resuming task ${processingItem.taskId} on mount`);
-      setCurrentTaskId(processingItem.taskId);
-      setProcessing(processingItem.id);
-      processingRef.current = true;
-    } else if (processingItem) {
-      // No task ID means it was interrupted - reset to pending
-      logger.debug("[Queue] Found interrupted processing item, resetting");
-      failItem(processingItem.id, QUEUE_ERRORS.TASK_INTERRUPTED.dev);
-      setProcessing(null);
-      processingRef.current = false;
-    }
-  }, []); // Run only on mount
-
-  // Auto-start: Start processing when prerequisites are met and items are pending
-  // The mutex lock in processNextItem prevents duplicate calls
-  useEffect(() => {
-    if (user?.uid && emailTemplate && supabaseReady && pendingCount > 0 && !isProcessing) {
-      logger.debug("[Queue] Prerequisites met, starting processing");
-      setTimeout(() => processNextItem(), 100);
-    }
-  }, [user?.uid, emailTemplate, supabaseReady, pendingCount, isProcessing]);
+  // Watch for newly completed items and invalidate relevant queries
+  useQueueCompletionWatcher({ queueItems });
 
   return {
-    currentTaskId,
-    currentTaskStatus: taskStatus || null,
-    isProcessing,
+    queueItems,
+    isLoading,
     pendingCount,
-    completedCount: sessionCompletedCount,
-    failedCount: sessionFailedCount,
-    addToQueue: (items: Array<{name: string; interest: string}>) => {
-      logger.info(`[Queue] Adding ${items.length} items to queue`);
-      addItems(items);
-      // Trigger processing after items are added
-      setTimeout(() => processNextItem(), 100);
+    processingCount,
+    completedCount,
+    failedCount,
+    currentItem,
+
+    submitBatch: async (items: Array<{ name: string; interest: string }>) => {
+      if (!emailTemplate) {
+        toastService.errorMessage("Please set an email template first");
+        return;
+      }
+
+      const batchItems: BatchItem[] = items.map((item) => ({
+        recipient_name: item.name,
+        recipient_interest: item.interest,
+      }));
+
+      await submitMutation.mutateAsync(batchItems);
     },
-    clearQueue,
+
+    cancelItem: async (id: string) => {
+      await cancelMutation.mutateAsync(id);
+    },
   };
 }

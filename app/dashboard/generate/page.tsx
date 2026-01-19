@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
-import { useSimpleQueueStore } from "@/stores/simple-queue-store";
+import { useQueueManager } from "@/hooks/useQueueManager";
 import {
   useEmailTemplate,
   useSetEmailTemplate,
@@ -32,7 +32,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export default function GenerateEmailsPage() {
   const { user, supabaseReady } = useAuth();
-  const addToQueue = useSimpleQueueStore((state) => state.addItems);
+  const { submitBatch } = useQueueManager();
 
   // Wait for Zustand stores to hydrate
   const uiHydrated = useHasHydrated();
@@ -76,20 +76,18 @@ export default function GenerateEmailsPage() {
     }
 
     // Only sync after initial load (prevents race condition on mount)
-    // Note: We save even when template is empty to allow users to clear their template
     if (supabaseReady && uiHydrated && templateLoaded) {
       debounceTimerRef.current = setTimeout(() => {
-        // Skip validation for empty templates (allow clearing)
-        if (template === "") {
-          api.user.updateTemplate(template).catch((error) => {
-            console.error("Failed to save template:", error);
-          });
-          return;
-        }
-
         // Validate template against backend constraints before saving
         const validation = TemplateUpdateSchema.safeParse({ template });
         if (!validation.success) {
+          // Don't save or show warnings for empty templates (valid UI state, not persisted)
+          if (template === "" || template.trim() === "") {
+            lastValidationErrorRef.current = null;
+            return;
+          }
+
+          // Show warning for other validation errors (too long, etc.)
           const errorMessage = validation.error.issues[0]?.message || "Invalid template";
           // Only show toast if error message changed (prevent spam on every keystroke)
           if (lastValidationErrorRef.current !== errorMessage) {
@@ -144,19 +142,23 @@ export default function GenerateEmailsPage() {
     setLoading(true);
     setShowMessage(false);
 
-    const professorNames = names.split(",").map(name => name.trim());
-    const itemsToQueue = professorNames.map(name => ({
-      name: name,
-      interest: interest,
-    }));
+    try {
+      const professorNames = names.split(",").map(name => name.trim()).filter(Boolean);
+      const itemsToQueue = professorNames.map(name => ({
+        name: name,
+        interest: interest,
+      }));
 
-    addToQueue(itemsToQueue);
+      await submitBatch(itemsToQueue);
 
-    // Clear the form fields (template is kept for convenience)
-    setNames("");
-
-    setLoading(false);
-    setShowMessage(true);
+      // Clear the form fields (template is kept for convenience)
+      setNames("");
+      setShowMessage(true);
+    } catch (error) {
+      console.error("Failed to submit batch:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
