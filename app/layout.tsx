@@ -7,6 +7,7 @@ import { AuthContextProvider } from "../context/AuthContextProvider"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import { Toaster } from "sonner"
 import { RequestIdCapture } from "@/components/RequestIdCapture"
+import { LegacyCleanup } from "@/components/LegacyCleanup"
 
 const inter = Inter({ subsets: ["latin", "cyrillic"] })
 
@@ -37,6 +38,7 @@ export default function RootLayout({
           duration={5000}
         />
         <RequestIdCapture />
+        <LegacyCleanup />
       </body>
     </html>
   )
