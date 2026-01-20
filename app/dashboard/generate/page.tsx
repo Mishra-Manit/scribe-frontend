@@ -5,15 +5,13 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/use-auth";
 import { useQueueManager } from "@/hooks/useQueueManager";
 import {
-  useEmailTemplate,
-  useSetEmailTemplate,
   useRecipientName,
   useSetRecipientName,
   useRecipientInterest,
   useSetRecipientInterest,
   useHasHydrated,
 } from "@/stores/ui-store";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { TemplateUpdateSchema } from "@/lib/schemas";
@@ -42,10 +40,9 @@ export default function GenerateEmailsPage() {
   const setNames = useSetRecipientName();
   const interest = useRecipientInterest();
   const setInterest = useSetRecipientInterest();
-  const template = useEmailTemplate();
-  const setTemplate = useSetEmailTemplate();
 
-  // Local UI state (not persisted)
+  // Local UI state (not persisted in store)
+  const [template, setTemplate] = useState("");
   const [loading, setLoading] = useState(false);
   const [showMessage, setShowMessage] = useState(false);
   const [templateLoaded, setTemplateLoaded] = useState(false);
@@ -53,18 +50,26 @@ export default function GenerateEmailsPage() {
   // Fetch user profile to get saved template
   const { data: userProfile, isLoading: profileLoading } = useQuery({
     queryKey: queryKeys.user.profile(),
-    queryFn: () => api.user.getUserData(),
+    queryFn: ({ signal }) => api.template.getUserProfile({ signal }),
     enabled: supabaseReady && uiHydrated,
+    staleTime: 30000,
   });
 
-  // Load template from database - always override localStorage with database value
+  // Load template from database
   useEffect(() => {
     if (userProfile?.email_template !== undefined) {
-      // Always set from database, even if it's null/empty (database is source of truth)
       setTemplate(userProfile.email_template || "");
-      setTemplateLoaded(true);  // Mark as loaded to enable auto-save
+      setTemplateLoaded(true);
     }
-  }, [userProfile?.email_template, setTemplate]);
+  }, [userProfile?.email_template]);
+
+  // Mutation for saving template
+  const updateTemplate = useMutation({
+    mutationFn: (template: string) => api.user.updateTemplate(template),
+    onError: (error) => {
+      console.error("Failed to save template:", error);
+    }
+  });
 
   // Debounced sync to database with frontend validation
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -100,9 +105,7 @@ export default function GenerateEmailsPage() {
         // Clear validation error state on successful validation
         lastValidationErrorRef.current = null;
 
-        api.user.updateTemplate(template).catch((error) => {
-          console.error("Failed to save template:", error);
-        });
+        updateTemplate.mutate(template);
       }, 2000);
     }
 
@@ -112,7 +115,7 @@ export default function GenerateEmailsPage() {
         clearTimeout(debounceTimerRef.current);
       }
     };
-  }, [template, supabaseReady, uiHydrated, templateLoaded]);
+  }, [template, supabaseReady, uiHydrated, templateLoaded, updateTemplate]);
 
   // Wait for stores to hydrate before rendering
   if (!uiHydrated) {
@@ -149,7 +152,7 @@ export default function GenerateEmailsPage() {
         interest: interest,
       }));
 
-      await submitBatch(itemsToQueue);
+      await submitBatch(itemsToQueue, template);
 
       // Clear the form fields (template is kept for convenience)
       setNames("");

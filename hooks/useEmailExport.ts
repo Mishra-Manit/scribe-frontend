@@ -28,32 +28,10 @@ export function useEmailExport(): UseEmailExportReturn {
       let hasMore = true;
 
       while (hasMore) {
-        let retryCount = 0;
-        let batch: EmailResponse[] = [];
-        let success = false;
-
-        // Retry logic for each batch
-        while (retryCount < 3 && !success) {
-          try {
-            batch = await emailAPI.getEmailHistory(BATCH_SIZE, offset);
-            success = true;
-          } catch (batchError) {
-            retryCount++;
-            if (retryCount >= 3) {
-              throw new Error(
-                `Failed to fetch emails after 3 retries: ${
-                  batchError instanceof Error
-                    ? batchError.message
-                    : "Unknown error"
-                }`
-              );
-            }
-            // Exponential backoff: 1s, 2s, 4s
-            await new Promise((resolve) =>
-              setTimeout(resolve, Math.pow(2, retryCount) * 1000)
-            );
-          }
-        }
+        // Use API client's built-in retry logic
+        const batch = await emailAPI.getEmailHistory(BATCH_SIZE, offset, {
+          retry: { maxAttempts: 3, baseDelay: 1000 }
+        });
 
         if (batch.length === 0) {
           hasMore = false;

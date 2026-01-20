@@ -7,9 +7,9 @@
 
 "use client";
 
+import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { useEmailTemplate } from "@/stores/ui-store";
 import { queueAPI, type QueueItem, type BatchItem } from "@/lib/api";
 import { queryKeys } from "@/lib/query-keys";
 import { toastService } from "@/lib/toast-service";
@@ -31,7 +31,7 @@ export interface QueueManagerState {
   currentItem: QueueItem | null;
 
   // Actions
-  submitBatch: (items: Array<{ name: string; interest: string }>) => Promise<void>;
+  submitBatch: (items: Array<{ name: string; interest: string }>, template: string) => Promise<void>;
   cancelItem: (id: string) => Promise<void>;
 }
 
@@ -46,7 +46,6 @@ export interface QueueManagerState {
  */
 export function useQueueManager(): QueueManagerState {
   const { user, supabaseReady } = useAuth();
-  const emailTemplate = useEmailTemplate();
   const queryClient = useQueryClient();
 
   // Poll queue status from server
@@ -70,11 +69,11 @@ export function useQueueManager(): QueueManagerState {
 
   // Batch submission mutation
   const submitMutation = useMutation({
-    mutationFn: async (items: BatchItem[]) => {
-      if (!emailTemplate) {
+    mutationFn: async ({ items, template }: { items: BatchItem[], template: string }) => {
+      if (!template) {
         throw new Error("Email template is required");
       }
-      return queueAPI.submitBatch(items, emailTemplate);
+      return queueAPI.submitBatch(items, template);
     },
     onSuccess: (data) => {
       logger.info(`[Queue] Submitted ${data.queue_item_ids.length} items`);
@@ -103,12 +102,26 @@ export function useQueueManager(): QueueManagerState {
     },
   });
 
-  // Computed values from server data
-  const pendingCount = queueItems.filter((i) => i.status === "pending").length;
-  const processingCount = queueItems.filter((i) => i.status === "processing").length;
-  const completedCount = queueItems.filter((i) => i.status === "completed").length;
-  const failedCount = queueItems.filter((i) => i.status === "failed").length;
-  const currentItem = queueItems.find((i) => i.status === "processing") || null;
+  // Computed values from server data (single-pass optimization)
+  const { pendingCount, processingCount, completedCount, failedCount, currentItem } = useMemo(() => {
+    const counts = { pending: 0, processing: 0, completed: 0, failed: 0 };
+    let current: QueueItem | null = null;
+
+    for (const item of queueItems) {
+      counts[item.status]++;
+      if (item.status === "processing" && !current) {
+        current = item;
+      }
+    }
+
+    return {
+      pendingCount: counts.pending,
+      processingCount: counts.processing,
+      completedCount: counts.completed,
+      failedCount: counts.failed,
+      currentItem: current,
+    };
+  }, [queueItems]);
 
   // Watch for newly completed items and invalidate relevant queries
   useQueueCompletionWatcher({ queueItems });
@@ -122,8 +135,8 @@ export function useQueueManager(): QueueManagerState {
     failedCount,
     currentItem,
 
-    submitBatch: async (items: Array<{ name: string; interest: string }>) => {
-      if (!emailTemplate) {
+    submitBatch: async (items: Array<{ name: string; interest: string }>, template: string) => {
+      if (!template) {
         toastService.errorMessage("Please set an email template first");
         return;
       }
@@ -133,7 +146,7 @@ export function useQueueManager(): QueueManagerState {
         recipient_interest: item.interest,
       }));
 
-      await submitMutation.mutateAsync(batchItems);
+      await submitMutation.mutateAsync({ items: batchItems, template });
     },
 
     cancelItem: async (id: string) => {

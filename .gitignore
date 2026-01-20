@@ -26,6 +26,7 @@
 /supabase/
 /supabase/.temp/
 .sisyphus/
+/conversations/
 
 # debug
 npm-debug.log*

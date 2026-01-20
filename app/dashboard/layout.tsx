@@ -25,8 +25,9 @@ export default function DashboardLayout({
 
   const { data: userProfile } = useQuery({
     queryKey: queryKeys.user.profile(),
-    queryFn: () => api.template.getUserProfile(),
+    queryFn: ({ signal }) => api.template.getUserProfile({ signal }),
     enabled: !!user?.uid && supabaseReady,
+    staleTime: 30000,
   });
 
   const showWelcome = userProfile?.onboarded === false;

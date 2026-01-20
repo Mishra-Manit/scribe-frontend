@@ -18,11 +18,6 @@ interface UIState {
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
 
-  // Email generation form state
-  emailTemplate: string;
-  setEmailTemplate: (template: string) => void;
-
-
   // Recipient form fields
   recipientName: string;
   setRecipientName: (name: string) => void;
@@ -46,7 +41,6 @@ interface UIState {
 
 const initialState = {
   _hasHydrated: false,
-  emailTemplate: "",
   recipientName: "",
   recipientInterest: "",
   hoveredEmailId: null,
@@ -61,7 +55,6 @@ export const useUIStore = create<UIState>()(
 
       // Actions
       setHasHydrated: (state) => set({ _hasHydrated: state }),
-      setEmailTemplate: (template) => set({ emailTemplate: template }),
       setRecipientName: (name) => set({ recipientName: name }),
       setRecipientInterest: (interest) => set({ recipientInterest: interest }),
       setHoveredEmailId: (id) => set({ hoveredEmailId: id }),
@@ -69,7 +62,6 @@ export const useUIStore = create<UIState>()(
 
       resetForm: () =>
         set({
-          emailTemplate: "",
           recipientName: "",
           recipientInterest: "",
         }),
@@ -81,7 +73,6 @@ export const useUIStore = create<UIState>()(
       storage: createJSONStorage(() => localStorage),
 
       // Only persist these fields (not hover/copied state or hydration flag)
-      // Note: emailTemplate is NOT persisted - it's stored in database only
       partialize: (state) => ({
         recipientName: state.recipientName,
         recipientInterest: state.recipientInterest,
@@ -99,14 +90,6 @@ export const useUIStore = create<UIState>()(
  * Granular selectors for optimal re-render performance
  * Components only re-render when their specific slice changes
  */
-
-// Email template selectors
-export const useEmailTemplate = () =>
-  useUIStore((state) => state.emailTemplate);
-export const useSetEmailTemplate = () =>
-  useUIStore((state) => state.setEmailTemplate);
-
-// Template type selectors
 
 // Recipient selectors
 export const useRecipientName = () => useUIStore((state) => state.recipientName);
@@ -139,16 +122,16 @@ export const useHasHydrated = () => useUIStore((state) => state._hasHydrated);
  * Usage Examples:
  *
  * 1. Basic usage:
- *    const template = useEmailTemplate();
- *    const setTemplate = useSetEmailTemplate();
+ *    const recipientName = useRecipientName();
+ *    const setRecipientName = useSetRecipientName();
  *
  * 2. Full store access:
- *    const { emailTemplate, setEmailTemplate, resetForm } = useUIStore();
+ *    const { recipientName, setRecipientName, resetForm } = useUIStore();
  *
- * 3. Optimized component (only re-renders when template changes):
- *    function TemplateInput() {
- *      const template = useEmailTemplate();
- *      const setTemplate = useSetEmailTemplate();
- *      return <textarea value={template} onChange={(e) => setTemplate(e.target.value)} />;
+ * 3. Optimized component (only re-renders when recipientName changes):
+ *    function RecipientInput() {
+ *      const name = useRecipientName();
+ *      const setName = useSetRecipientName();
+ *      return <input value={name} onChange={(e) => setName(e.target.value)} />;
  *    }
  */
