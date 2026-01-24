@@ -27,6 +27,12 @@ import { SlideIn } from "@/components/motion/SlideIn";
 import { ScaleIn } from "@/components/motion/ScaleIn";
 import { Loader2, Sparkles, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function GenerateEmailsPage() {
   const { user, supabaseReady } = useAuth();
@@ -187,7 +193,6 @@ export default function GenerateEmailsPage() {
                   <Card className="border-none shadow-sm bg-blue-50/50 border-blue-100/50">
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3 text-blue-900 font-semibold">
-                        <Info className="h-4 w-4" />
                         <span>Template Guide</span>
                       </div>
                       <p className="text-sm text-blue-800/80 mb-4 leading-relaxed">
@@ -226,9 +231,21 @@ export default function GenerateEmailsPage() {
                 <div className="bg-white rounded-xl shadow-[0_2px_10px_-2px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden">
                   <div className="p-6 md:p-8 space-y-6">
                     <div className="space-y-2">
-                      <Label htmlFor="names" className="text-gray-700 font-medium">
-                        Recipients
-                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor="names" className="text-gray-700 font-medium">
+                          Recipients
+                        </Label>
+                        <TooltipProvider delayDuration={50}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="hidden sm:block h-4 w-4 text-gray-400 cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-xs">
+                              <p>Queue up to 100 recipients at once using comma-separated names.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
                       <Input
                         id="names"
                         placeholder="John Smith, Sarah Jones, Michael Williams..."
@@ -236,7 +253,7 @@ export default function GenerateEmailsPage() {
                         value={names}
                         onChange={(e) => setNames(e.target.value)}
                       />
-                      <p className="text-xs text-gray-400">Comma separated names</p>
+                      {/*<p className="text-xs text-gray-400">Comma separated names</p>*/}
                     </div>
 
                     <div className="space-y-2">
