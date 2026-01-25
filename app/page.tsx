@@ -51,7 +51,7 @@ export default function LandingPage() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-black bg-grid-pattern-black">
       <div className="text-center px-4 max-w-4xl">
         <FadeIn delay={0.1}>
-          <div className="inline-flex items-center gap-2 mb-8 border border-white/10 bg-white/5 rounded-full px-4 py-1.5 backdrop-blur-sm">
+          <div className="inline-flex items-center gap-2 mb-8 border border-white/10 bg-white/5 rounded-full px-4 py-1.5 backdrop-blur-xs">
             <Sparkles className="w-4 h-4 text-white/70" />
             <span className="text-sm text-white/70 font-medium">AI-Powered Research Outreach</span>
           </div>

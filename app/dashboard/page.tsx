@@ -252,12 +252,12 @@ export default function DashboardPage() {
                               onMouseLeave={() => setHoveredEmailId(null)}
                             >
                               <td className="px-6 py-4 text-sm font-medium text-gray-900 align-top">
-                                <div className="max-w-xs break-words">
+                                <div className="max-w-xs wrap-break-word">
                                   {email.recipient_name}
                                 </div>
                               </td>
                               <td className="px-6 py-4 text-sm text-gray-500 align-top">
-                                <div className="max-w-xs break-words">
+                                <div className="max-w-xs wrap-break-word">
                                   {email.recipient_interest}
                                 </div>
                               </td>
@@ -287,7 +287,7 @@ export default function DashboardPage() {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-8 bg-white shadow-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                                      className="h-8 bg-white shadow-xs hover:bg-red-50 hover:text-red-600 hover:border-red-200"
                                       onClick={() => {
                                         setDiscardingEmailId(email.id);
                                         discardEmail(
@@ -310,7 +310,7 @@ export default function DashboardPage() {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-8 bg-white shadow-sm hover:bg-gray-50 hover:text-gray-900"
+                                      className="h-8 bg-white shadow-xs hover:bg-gray-50 hover:text-gray-900"
                                       onClick={async () => {
                                         if (email.email_message) {
                                           await navigator.clipboard.writeText(email.email_message);

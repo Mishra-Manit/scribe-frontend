@@ -43,7 +43,7 @@ export function WelcomeScreen({ isOpen }: { isOpen: boolean }) {
 
         <div className="py-4 space-y-4">
           <FadeIn delay={0.1}>
-            <Card className="border-none shadow-sm bg-gray-50/50 border-gray-100">
+            <Card className="border-none shadow-xs bg-gray-50/50 border-gray-100">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-3 text-gray-900 font-semibold">
                   <CheckCircle2 className="h-4 w-4" />
@@ -51,13 +51,13 @@ export function WelcomeScreen({ isOpen }: { isOpen: boolean }) {
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-gray-600 mt-0.5 shrink-0" />
                     <span className="text-sm text-gray-700">
                       Professor names (full names) for email personalization
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-gray-600 mt-0.5 flex-shrink-0" />
+                    <CheckCircle2 className="h-4 w-4 text-gray-600 mt-0.5 shrink-0" />
                     <span className="text-sm text-gray-700">
                       A cold email template (create one using our{" "}
                       <Link
@@ -75,7 +75,7 @@ export function WelcomeScreen({ isOpen }: { isOpen: boolean }) {
           </FadeIn>
 
           <FadeIn delay={0.2}>
-            <Card className="border-none shadow-sm bg-white border-gray-200">
+            <Card className="border-none shadow-xs bg-white border-gray-200">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-3 text-gray-900 font-semibold">
                   <Info className="h-4 w-4" />
@@ -89,7 +89,7 @@ export function WelcomeScreen({ isOpen }: { isOpen: boolean }) {
           </FadeIn>
 
           <FadeIn delay={0.3}>
-            <Card className="border-none shadow-sm bg-gray-50/50 border-gray-100">
+            <Card className="border-none shadow-xs bg-gray-50/50 border-gray-100">
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-3 text-gray-900 font-semibold">
                   <Sparkles className="h-4 w-4" />

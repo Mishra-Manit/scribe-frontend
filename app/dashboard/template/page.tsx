@@ -180,7 +180,7 @@ export default function TemplateGenerationPage() {
                   Generate a custom email template based on your resume and goals.
                 </p>
               </div>
-              <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-sm text-sm">
+              <div className="bg-white px-4 py-2 rounded-lg border border-gray-200 shadow-xs text-sm">
                 <span className="font-semibold text-gray-900">{templatesRemaining}</span>
                 <span className="text-gray-500"> of {MAX_TEMPLATES} templates remaining</span>
               </div>

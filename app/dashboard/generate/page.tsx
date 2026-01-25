@@ -190,7 +190,7 @@ export default function GenerateEmailsPage() {
             <div className="lg:col-span-1 order-last lg:order-first">
               <SlideIn delay={0.2} direction="left">
                 <div className="sticky top-28 space-y-4">
-                  <Card className="border-none shadow-sm bg-blue-50/50 border-blue-100/50">
+                  <Card className="border-none shadow-xs bg-blue-50/50 border-blue-100/50">
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3 text-blue-900 font-semibold">
                         <span>Template Guide</span>
@@ -213,7 +213,7 @@ export default function GenerateEmailsPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-none shadow-sm">
+                  <Card className="border-none shadow-xs">
                     <CardContent className="p-5">
                       <h3 className="font-semibold text-gray-900 mb-3 text-sm">Pro Tip</h3>
                       <p className="text-sm text-gray-500 leading-relaxed">
