@@ -137,7 +137,6 @@ This is an email generation application with a persistent background queue syste
 6. **Mutex locks**: The queue processing uses mutexes - don't add additional processing calls without understanding the locking mechanism
 7. **Middleware JWT validation**: Middleware uses `getClaims()` to validate JWTs locally without clearing sessions - expired tokens are handled gracefully by client-side auth flow
 
-
 # Bash Guidelines
 
 ## IMPORTANT: Avoid commands that cause output buffering issues
