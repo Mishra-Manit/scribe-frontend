@@ -136,3 +136,17 @@ This is an email generation application with a persistent background queue syste
 5. **React Query signals**: AbortController signals are automatically passed by React Query - don't override them
 6. **Mutex locks**: The queue processing uses mutexes - don't add additional processing calls without understanding the locking mechanism
 7. **Middleware JWT validation**: Middleware uses `getClaims()` to validate JWTs locally without clearing sessions - expired tokens are handled gracefully by client-side auth flow
+
+
+# Bash Guidelines
+
+## IMPORTANT: Avoid commands that cause output buffering issues
+- DO NOT pipe output through `head`, `tail`, `less`, or `more` when monitoring or checking command output
+- DO NOT use `| head -n X` or `| tail -n X` to truncate output - these cause buffering problems
+- Instead, let commands complete fully, or use `--max-lines` flags if the command supports them
+- For log monitoring, prefer reading files directly rather than piping through filters
+
+## When checking command output:
+- Run commands directly without pipes when possible
+- If you need to limit output, use command-specific flags (e.g., `git log -n 10` instead of `git log | head -10`)
+- Avoid chained pipes that can cause output to buffer indefinitely

@@ -1,7 +1,7 @@
 import type React from "react"
 import "./globals.css"
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Geist, Geist_Mono } from "next/font/google"
 import { QueryProvider } from "@/providers/QueryProvider"
 import { AuthContextProvider } from "../context/AuthContextProvider"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
@@ -9,11 +9,19 @@ import { Toaster } from "sonner"
 import { RequestIdCapture } from "@/components/RequestIdCapture"
 import { LegacyCleanup } from "@/components/LegacyCleanup"
 
-const inter = Inter({ subsets: ["latin", "cyrillic"] })
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+})
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+})
 
 export const metadata: Metadata = {
   title: "Scribe",
-  description: "The fastest and most effective way to start, test and validate your business idea with AI",
+  description: "The fastest and most effective way to cold email professors for research opportunities.",
 }
 
 export default function RootLayout({
@@ -23,7 +31,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <QueryProvider>
           <AuthContextProvider>
             <ErrorBoundary>
