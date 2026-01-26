@@ -27,7 +27,7 @@ function SpinningShape() {
 export function HeroBackground() {
     return (
         <div className="absolute inset-0 z-0 pointer-events-none opacity-20 overflow-hidden bg-black">
-            <Canvas camera={{ position: [0, 0, 10] }}>
+            <Canvas camera={{ position: [-1, 0, 10] }}>
                 <color attach="background" args={["black"]} />
                 <ambientLight intensity={0.5} />
                 <spotLight position={[0, 10, 10]} angle={0.15} penumbra={1} />
