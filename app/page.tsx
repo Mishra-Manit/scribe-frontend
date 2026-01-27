@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import React from "react";
 import { supabase } from "../config/supabase";
 import { useAuth } from "../context/AuthContextProvider";
@@ -9,20 +9,25 @@ import { LandingHeader } from "@/components/landing/header";
 
 export default function LandingPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
+  const redirectParam = searchParams.get("redirect");
+  const redirectPath = getSafeRedirectPath(redirectParam);
 
   React.useEffect(() => {
     if (user) {
-      router.replace("/dashboard");
+      router.replace(redirectPath);
     }
-  }, [user, router]);
+  }, [user, router, redirectPath]);
 
   const loginWithGoogle = async () => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(
+            redirectPath
+          )}`,
         },
       });
 
@@ -40,4 +45,12 @@ export default function LandingPage() {
       <Hero onGetStarted={loginWithGoogle} />
     </div>
   );
+}
+
+function getSafeRedirectPath(redirectParam: string | null) {
+  if (!redirectParam) return "/dashboard";
+  if (redirectParam.startsWith("/") && !redirectParam.startsWith("//")) {
+    return redirectParam;
+  }
+  return "/dashboard";
 }

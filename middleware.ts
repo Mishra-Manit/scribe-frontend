@@ -94,7 +94,7 @@ export async function middleware(request: NextRequest) {
           requestId,
           path: pathname,
         });
-        const redirectUrl = new URL('/login', request.url);
+        const redirectUrl = new URL('/', request.url);
         redirectUrl.searchParams.set('redirect', pathname);
         return NextResponse.redirect(redirectUrl);
       }
@@ -115,7 +115,7 @@ export async function middleware(request: NextRequest) {
           requestId,
           path: pathname,
         });
-        const redirectUrl = new URL('/login', request.url);
+        const redirectUrl = new URL('/', request.url);
         redirectUrl.searchParams.set('redirect', pathname);
         return NextResponse.redirect(redirectUrl);
       }
@@ -133,7 +133,7 @@ export async function middleware(request: NextRequest) {
         requestId,
         path: pathname,
       });
-      const redirectUrl = new URL('/login', request.url);
+      const redirectUrl = new URL('/', request.url);
       redirectUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(redirectUrl);
     }

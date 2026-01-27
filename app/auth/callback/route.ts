@@ -3,12 +3,22 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 
+function getSafeRedirectPath(redirectParam: string | null) {
+  if (!redirectParam) return '/dashboard';
+  if (redirectParam.startsWith('/') && !redirectParam.startsWith('//')) {
+    return redirectParam;
+  }
+  return '/dashboard';
+}
+
 // OAuth callback handler for Supabase authentication
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   const error = requestUrl.searchParams.get('error');
   const errorDescription = requestUrl.searchParams.get('error_description');
+  const redirectParam = requestUrl.searchParams.get('redirect');
+  const redirectPath = getSafeRedirectPath(redirectParam);
 
   // Use NEXT_PUBLIC_SITE_URL if available, otherwise fallback to request origin
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || requestUrl.origin;
@@ -64,8 +74,8 @@ export async function GET(request: NextRequest) {
 
     console.log('[OAuth Callback] ✅ Session established for user:', sessionData.session.user.id);
 
-    // Successfully authenticated - redirect to dashboard
-    return NextResponse.redirect(`${baseUrl}/dashboard`);
+    // Successfully authenticated - redirect to requested destination
+    return NextResponse.redirect(`${baseUrl}${redirectPath}`);
   }
 
   // No code provided, redirect to home
