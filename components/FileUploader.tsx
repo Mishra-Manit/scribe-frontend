@@ -42,7 +42,7 @@ export default function FileUploader({
 
   return (
     <div className="space-y-2">
-      <Label htmlFor="resume" className="block text-sm font-medium text-gray-700">
+      <Label htmlFor="resume" className="block text-sm font-medium text-foreground">
         Upload Resume (PDF only, max 10MB)
       </Label>
       <Input
@@ -54,7 +54,7 @@ export default function FileUploader({
         className="cursor-pointer"
       />
       {selectedFile && (
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted-foreground">
           Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
         </p>
       )}
