@@ -43,26 +43,26 @@ export function WelcomeScreen({ isOpen }: { isOpen: boolean }) {
 
         <div className="py-4 space-y-4">
           <FadeIn delay={0.1}>
-            <Card className="border-none shadow-xs bg-gray-50/50 border-gray-100">
+            <Card className="border-border/50 bg-muted/30">
               <CardContent className="p-5">
-                <div className="flex items-center gap-2 mb-3 text-gray-900 font-semibold">
+                <div className="flex items-center gap-2 mb-3 text-foreground font-semibold">
                   <CheckCircle2 className="h-4 w-4" />
                   <span>What You'll Need</span>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-gray-600 mt-0.5 shrink-0" />
-                    <span className="text-sm text-gray-700">
+                    <CheckCircle2 className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <span className="text-sm text-muted-foreground">
                       Professor names (full names) for email personalization
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-gray-600 mt-0.5 shrink-0" />
-                    <span className="text-sm text-gray-700">
+                    <CheckCircle2 className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <span className="text-sm text-muted-foreground">
                       A cold email template (create one using our{" "}
                       <Link
                         href="/dashboard/template"
-                        className="text-gray-900 hover:text-black font-medium hover:underline"
+                        className="text-foreground hover:text-primary font-medium hover:underline"
                       >
                         Template Tool
                       </Link>
@@ -75,13 +75,13 @@ export function WelcomeScreen({ isOpen }: { isOpen: boolean }) {
           </FadeIn>
 
           <FadeIn delay={0.2}>
-            <Card className="border-none shadow-xs bg-white border-gray-200">
+            <Card className="border-border/50 bg-card">
               <CardContent className="p-5">
-                <div className="flex items-center gap-2 mb-3 text-gray-900 font-semibold">
+                <div className="flex items-center gap-2 mb-3 text-foreground font-semibold">
                   <Info className="h-4 w-4" />
                   <span>Free Usage</span>
                 </div>
-                <p className="text-sm text-gray-600 leading-relaxed">
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   Usage of the tool is free, however there is a limit to the number of emails that can be generated at a time.
                 </p>
               </CardContent>
@@ -89,15 +89,15 @@ export function WelcomeScreen({ isOpen }: { isOpen: boolean }) {
           </FadeIn>
 
           <FadeIn delay={0.3}>
-            <Card className="border-none shadow-xs bg-gray-50/50 border-gray-100">
+            <Card className="border-border/50 bg-muted/30">
               <CardContent className="p-5">
-                <div className="flex items-center gap-2 mb-3 text-gray-900 font-semibold">
+                <div className="flex items-center gap-2 mb-3 text-foreground font-semibold">
                   <Sparkles className="h-4 w-4" />
                   <span>Pro Tip</span>
                 </div>
-                <p className="text-sm text-gray-700 leading-relaxed">
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   Generate your emails using the service, export them as an Excel sheet, and then use a spreadsheet emailer like{" "}
-                  <Link href="https://www.yamm.com/" target="_blank" className="text-blue-600 underline font-medium hover:text-blue-700 hover:underline">YAMM (Yet Another Mail Merge)</Link> to manage your email campaigns when sending to professors.
+                  <Link href="https://www.yamm.com/" target="_blank" className="text-primary underline font-medium hover:text-primary/80 hover:underline">YAMM (Yet Another Mail Merge)</Link> to manage your email campaigns when sending to professors.
                 </p>
               </CardContent>
             </Card>

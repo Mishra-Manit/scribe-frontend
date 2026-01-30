@@ -127,10 +127,10 @@ export default function GenerateEmailsPage() {
   if (!uiHydrated) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen flex items-center justify-center bg-gray-50/50">
+        <div className="min-h-screen flex items-center justify-center bg-background">
           <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto text-gray-900 mb-4" />
-            <p className="text-gray-500 font-medium">Loading...</p>
+            <Loader2 className="h-8 w-8 animate-spin mx-auto text-foreground mb-4" />
+            <p className="text-muted-foreground font-medium">Loading...</p>
           </div>
         </div>
       </ProtectedRoute>
@@ -172,14 +172,14 @@ export default function GenerateEmailsPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50/50 pb-12">
+      <div className="min-h-screen bg-background pb-12">
         <Navbar />
 
         <main className="max-w-4xl mx-auto pt-24 px-4 sm:px-6 lg:px-8">
           <FadeIn>
             <div className="text-center mb-10">
-              <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-3">Generate Cold Emails</h1>
-              <p className="text-gray-500 max-w-xl mx-auto">
+              <h1 className="text-3xl font-bold text-foreground tracking-tight mb-3">Generate Cold Emails</h1>
+              <p className="text-muted-foreground max-w-xl mx-auto">
                 Create personalized outreach emails in bulk. Just provide the recipients and your template.
               </p>
             </div>
@@ -190,33 +190,33 @@ export default function GenerateEmailsPage() {
             <div className="lg:col-span-1 order-last lg:order-first">
               <SlideIn delay={0.2} direction="left">
                 <div className="sticky top-28 space-y-4">
-                  <Card className="border-none shadow-xs bg-blue-50/50 border-blue-100/50">
+                  <Card className="border-border/50 bg-primary/5 dark:bg-primary/10">
                     <CardContent className="p-5">
-                      <div className="flex items-center gap-2 mb-3 text-blue-900 font-semibold">
+                      <div className="flex items-center gap-2 mb-3 text-foreground font-semibold">
                         <span>Template Guide</span>
                       </div>
-                      <p className="text-sm text-blue-800/80 mb-4 leading-relaxed">
+                      <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
                         Use double curly braces to insert personalized variables.
                       </p>
 
                       <div className="space-y-3">
-                        <div className="text-xs font-mono bg-white/60 p-2 rounded text-blue-900 border border-blue-100">
+                        <div className="text-xs font-mono bg-card/80 p-2 rounded text-foreground border border-border">
                           {'{{professor_name}}'}
                         </div>
-                        <div className="text-xs font-mono bg-white/60 p-2 rounded text-blue-900 border border-blue-100">
+                        <div className="text-xs font-mono bg-card/80 p-2 rounded text-foreground border border-border">
                           {'{{research_paper}}'}
                         </div>
-                        <div className="text-xs font-mono bg-white/60 p-2 rounded text-blue-900 border border-blue-100">
+                        <div className="text-xs font-mono bg-card/80 p-2 rounded text-foreground border border-border">
                           {'{{university_name}}'}
                         </div>
                       </div>
                     </CardContent>
                   </Card>
 
-                  <Card className="border-none shadow-xs">
+                  <Card className="border-border/50 bg-card">
                     <CardContent className="p-5">
-                      <h3 className="font-semibold text-gray-900 mb-3 text-sm">Pro Tip</h3>
-                      <p className="text-sm text-gray-500 leading-relaxed">
+                      <h3 className="font-semibold text-foreground mb-3 text-sm">Pro Tip</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
                         The more specific your interest field, the better the personalization will be. Try "Reinforcement Learning in Robotics" instead of just "AI".
                       </p>
                     </CardContent>
@@ -228,17 +228,17 @@ export default function GenerateEmailsPage() {
             {/* Form Section */}
             <div className="lg:col-span-2">
               <ScaleIn delay={0.1}>
-                <div className="bg-white rounded-xl shadow-[0_2px_10px_-2px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden">
+                <div className="bg-card rounded-xl shadow-sm border border-border overflow-hidden">
                   <div className="p-6 md:p-8 space-y-6">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <Label htmlFor="names" className="text-gray-700 font-medium">
+                        <Label htmlFor="names" className="text-foreground font-medium">
                           Recipients
                         </Label>
                         <TooltipProvider delayDuration={50}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Info className="hidden sm:block h-4 w-4 text-gray-400 cursor-help" />
+                              <Info className="hidden sm:block h-4 w-4 text-muted-foreground cursor-help" />
                             </TooltipTrigger>
                             <TooltipContent side="right" className="max-w-xs">
                               <p>Queue up to 100 recipients at once using comma-separated names.</p>
@@ -249,47 +249,47 @@ export default function GenerateEmailsPage() {
                       <Input
                         id="names"
                         placeholder="John Smith, Sarah Jones, Michael Williams..."
-                        className="w-full bg-gray-50/50"
+                        className="w-full bg-muted/30"
                         value={names}
                         onChange={(e) => setNames(e.target.value)}
                       />
-                      {/*<p className="text-xs text-gray-400">Comma separated names</p>*/}
+                      {/*<p className="text-xs text-muted-foreground">Comma separated names</p>*/}
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="interest" className="text-gray-700 font-medium">
+                      <Label htmlFor="interest" className="text-foreground font-medium">
                         Professor's Research Field
                       </Label>
                       <Input
                         id="interest"
                         placeholder="e.g. Natural Language Processing"
-                        className="w-full bg-gray-50/50"
+                        className="w-full bg-muted/30"
                         value={interest}
                         onChange={(e) => setInterest(e.target.value)}
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="template" className="text-gray-700 font-medium">
+                      <Label htmlFor="template" className="text-foreground font-medium">
                         Email Template
                       </Label>
                       <Textarea
                         id="template"
                         placeholder="Dear {{professor_name}}, ..."
-                        className="w-full bg-gray-50/50 min-h-[450px] font-mono text-xs leading-relaxed"
+                        className="w-full bg-muted/30 min-h-[450px] font-mono text-xs leading-relaxed"
                         value={template}
                         onChange={(e) => setTemplate(e.target.value)}
                         disabled={profileLoading}
                       />
                       {profileLoading && (
-                        <p className="text-xs text-gray-400 mt-1">Loading saved template...</p>
+                        <p className="text-xs text-muted-foreground mt-1">Loading saved template...</p>
                       )}
                     </div>
                   </div>
 
-                  <div className="p-6 border-t border-gray-50 bg-gray-50/30 flex flex-col items-center gap-4">
+                  <div className="p-6 border-t border-border bg-muted/30 flex flex-col items-center gap-4">
                     <Button
-                      className="w-full sm:w-auto min-w-[200px] shadow-lg shadow-blue-900/5 hover:shadow-blue-900/10 transition-all"
+                      className="w-full sm:w-auto min-w-[200px] shadow-lg shadow-primary/5 hover:shadow-primary/10 transition-all"
                       size="lg"
                       onClick={handleSubmit}
                       disabled={loading}
@@ -309,7 +309,7 @@ export default function GenerateEmailsPage() {
 
                     {showMessage && (
                       <FadeIn>
-                        <p className="text-sm text-gray-500 text-center bg-green-50 text-green-700 px-4 py-2 rounded-full border border-green-100">
+                        <p className="text-sm text-center bg-green-500/10 text-green-600 dark:text-green-400 px-4 py-2 rounded-full border border-green-500/20">
                           Added to queue! Check status on{" "}
                           <Link href="/dashboard" className="font-semibold hover:underline">
                             dashboard

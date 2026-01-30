@@ -3,6 +3,7 @@ import "./globals.css"
 import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import { QueryProvider } from "@/providers/QueryProvider"
+import { ThemeProvider } from "@/providers/ThemeProvider"
 import { AuthContextProvider } from "../context/AuthContextProvider"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import { Toaster } from "sonner"
@@ -30,15 +31,17 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <QueryProvider>
-          <AuthContextProvider>
-            <ErrorBoundary>
-              {children}
-            </ErrorBoundary>
-          </AuthContextProvider>
-        </QueryProvider>
+        <ThemeProvider>
+          <QueryProvider>
+            <AuthContextProvider>
+              <ErrorBoundary>
+                {children}
+              </ErrorBoundary>
+            </AuthContextProvider>
+          </QueryProvider>
+        </ThemeProvider>
         <Toaster
           position="top-right"
           richColors
