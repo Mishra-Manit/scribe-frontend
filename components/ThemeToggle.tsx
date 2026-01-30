@@ -53,7 +53,7 @@ export function ThemeToggle() {
         <Button
           variant="outline"
           size="icon"
-          className="h-9 w-9 border-border/50 bg-background/50 backdrop-blur-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+          className="h-9 w-9 border-border/50 bg-background/50 backdrop-blur-sm hover:bg-accent hover:text-accent-foreground transition-colors focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-foreground/30"
         >
           {currentIcon()}
           <span className="sr-only">Toggle theme</span>
