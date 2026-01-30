@@ -36,28 +36,5 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [theme, hasHydrated]);
 
-  // Prevent flash of unstyled content by applying theme immediately on mount
-  useEffect(() => {
-    // This runs once on initial mount to prevent flash
-    const savedTheme = localStorage.getItem("scribe-theme-storage");
-    if (savedTheme) {
-      try {
-        const parsed = JSON.parse(savedTheme);
-        const themeValue = parsed.state?.theme;
-        
-        if (themeValue === "dark") {
-          document.documentElement.classList.add("dark");
-        } else if (themeValue === "system") {
-          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-          if (prefersDark) {
-            document.documentElement.classList.add("dark");
-          }
-        }
-      } catch {
-        // Ignore parsing errors
-      }
-    }
-  }, []);
-
   return <>{children}</>;
 }

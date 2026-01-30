@@ -1,6 +1,7 @@
 import type React from "react"
 import "./globals.css"
 import type { Metadata } from "next"
+import Script from "next/script"
 import { Geist, Geist_Mono } from "next/font/google"
 import { QueryProvider } from "@/providers/QueryProvider"
 import { ThemeProvider } from "@/providers/ThemeProvider"
@@ -20,6 +21,28 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 })
 
+const themeInitScript = `
+(() => {
+  try {
+    const stored = localStorage.getItem("scribe-theme-storage");
+    if (!stored) return;
+    const parsed = JSON.parse(stored);
+    const theme = parsed?.state?.theme;
+    if (!theme) return;
+    const root = document.documentElement;
+    if (theme === "dark") {
+      root.classList.add("dark");
+      return;
+    }
+    if (theme === "system") {
+      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        root.classList.add("dark");
+      }
+    }
+  } catch {}
+})();
+`;
+
 export const metadata: Metadata = {
   title: "Scribe",
   description: "The fastest and most effective way to cold email professors for research opportunities.",
@@ -33,6 +56,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: themeInitScript }}
+        />
         <ThemeProvider>
           <QueryProvider>
             <AuthContextProvider>

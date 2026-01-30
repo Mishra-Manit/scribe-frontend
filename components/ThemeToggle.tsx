@@ -63,7 +63,7 @@ export function ThemeToggle() {
         {options.map((option) => (
           <DropdownMenuItem
             key={option.value}
-            onClick={() => setTheme(option.value)}
+            onSelect={() => setTheme(option.value)}
             className={`flex items-center gap-2 cursor-pointer ${
               theme === option.value ? "bg-accent" : ""
             }`}
