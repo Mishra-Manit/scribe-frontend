@@ -94,10 +94,10 @@ export default function DashboardPage() {
   if (!uiHydrated) {
     return (
       <ProtectedRoute>
-        <div className="min-h-screen flex items-center justify-center bg-gray-50/50">
+        <div className="min-h-screen flex items-center justify-center bg-background">
           <div className="text-center">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-gray-900 border-r-transparent mb-4"></div>
-            <p className="text-gray-500 font-medium">Loading...</p>
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-foreground border-r-transparent mb-4"></div>
+            <p className="text-muted-foreground font-medium">Loading...</p>
           </div>
         </div>
       </ProtectedRoute>
@@ -106,17 +106,17 @@ export default function DashboardPage() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-gray-50/50 pb-12">
+      <div className="min-h-screen bg-background pb-12">
           <Navbar />
           
           <main className="max-w-7xl mx-auto pt-24 px-4 sm:px-6 lg:px-8">
             <FadeIn>
               {/* Welcome Section */}
               <div className="py-8">
-                <h1 className="text-3xl font-bold text-gray-900 tracking-tight mb-2">
+                <h1 className="text-3xl font-bold text-foreground tracking-tight mb-2">
                   Welcome back, {user?.displayName || "Guest"}
                 </h1>
-                <p className="text-gray-500 text-lg">
+                <p className="text-muted-foreground text-lg">
                   Overview of your email generation activity.
                 </p>
               </div>
@@ -124,9 +124,9 @@ export default function DashboardPage() {
               {/* Stats Section */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                 <ScaleIn delay={0.1}>
-                  <Card className="h-full border-none shadow-[0_2px_10px_-2px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] transition-all duration-300">
+                  <Card className="h-full border-border/50 bg-card shadow-sm hover:shadow-md transition-all duration-300">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium text-gray-500">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
                         Total Emails Generated
                       </CardTitle>
                       <svg
@@ -137,14 +137,14 @@ export default function DashboardPage() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth="2"
-                        className="h-4 w-4 text-gray-400"
+                        className="h-4 w-4 text-muted-foreground"
                       >
                         <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                       </svg>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-gray-900">{totalEmailsGenerated}</div>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <div className="text-3xl font-bold text-foreground">{totalEmailsGenerated}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
                         Lifetime total
                       </p>
                     </CardContent>
@@ -152,9 +152,9 @@ export default function DashboardPage() {
                 </ScaleIn>
 
                 <ScaleIn delay={0.2}>
-                  <Card className="h-full border-none shadow-[0_2px_10px_-2px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] transition-all duration-300">
+                  <Card className="h-full border-border/50 bg-card shadow-sm hover:shadow-md transition-all duration-300">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium text-gray-500">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
                         Account Type
                       </CardTitle>
                       <svg
@@ -165,7 +165,7 @@ export default function DashboardPage() {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth="2"
-                        className="h-4 w-4 text-gray-400"
+                        className="h-4 w-4 text-muted-foreground"
                       >
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
@@ -173,8 +173,8 @@ export default function DashboardPage() {
                       </svg>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-gray-900">Free</div>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <div className="text-3xl font-bold text-foreground">Free</div>
+                      <p className="text-xs text-muted-foreground mt-1">
                         Current plan
                       </p>
                     </CardContent>
@@ -190,13 +190,13 @@ export default function DashboardPage() {
             {/* Email History Section */}
             <SlideIn delay={0.4} className="space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Email History</h2>
+                <h2 className="text-xl font-semibold text-foreground">Email History</h2>
                 <Button
                   onClick={exportEmails}
                   disabled={isExporting || emailHistory.length === 0}
                   variant="outline"
                   size="sm"
-                  className="bg-white"
+                  className="bg-card"
                 >
                   {isExporting ? (
                     <>
@@ -214,71 +214,71 @@ export default function DashboardPage() {
 
               {/* Error display */}
               {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 rounded-md text-sm">
+                <div className="mb-4 p-3 bg-destructive/10 border border-destructive/20 text-destructive rounded-md text-sm">
                   {error}
                 </div>
               )}
 
-              <Card className="border-none shadow-[0_2px_10px_-2px_rgba(0,0,0,0.1)] overflow-hidden">
+              <Card className="border-border/50 bg-card shadow-sm overflow-hidden">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50/50 border-b border-gray-100">
+                      <thead className="bg-muted/50 border-b border-border">
                         <tr>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[12%]">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[12%]">
                             Recipient
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[12%]">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[12%]">
                             Interest
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[8%]">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[8%]">
                             Type
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[10%]">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[10%]">
                             Status
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[58%]">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[58%]">
                             Content
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-gray-50">
+                      <tbody className="bg-card divide-y divide-border/50">
                         {emailHistory.length > 0 ? (
                           emailHistory.map((email) => (
                             <tr
                               key={email.id}
-                              className="hover:bg-gray-50/80 transition-colors duration-150"
+                              className="hover:bg-muted/50 transition-colors duration-150"
                               onMouseEnter={() => setHoveredEmailId(email.id)}
                               onMouseLeave={() => setHoveredEmailId(null)}
                             >
-                              <td className="px-6 py-4 text-sm font-medium text-gray-900 align-top">
+                              <td className="px-6 py-4 text-sm font-medium text-foreground align-top">
                                 <div className="max-w-xs wrap-break-word">
                                   {email.recipient_name}
                                 </div>
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-500 align-top">
+                              <td className="px-6 py-4 text-sm text-muted-foreground align-top">
                                 <div className="max-w-xs wrap-break-word">
                                   {email.recipient_interest}
                                 </div>
                               </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 align-top">
-                                <span className="px-2.5 py-0.5 text-xs font-medium rounded-full bg-purple-50 text-purple-700 capitalize border border-purple-100">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground align-top">
+                                <span className="px-2.5 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary capitalize border border-primary/20">
                                   {email.template_type}
                                 </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm align-top">
                                 <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full border ${
                                   email.is_confident
-                                    ? 'bg-green-50 text-green-700 border-green-100'
-                                    : 'bg-amber-50 text-amber-700 border-amber-100'
+                                    ? 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20'
+                                    : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
                                 }`}>
                                   {email.is_confident ? 'Confident' : 'Draft'}
                                 </span>
                               </td>
-                              <td className="px-6 py-4 text-sm text-gray-600 relative group">
+                              <td className="px-6 py-4 text-sm text-muted-foreground relative group">
                                 <div className="max-w-full">
                                   <div>
-                                    <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-600">
+                                    <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-muted-foreground">
                                       {email.email_message || "No content"}
                                     </pre>
                                   </div>
@@ -287,7 +287,7 @@ export default function DashboardPage() {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-8 bg-white shadow-xs hover:bg-red-50 hover:text-red-600 hover:border-red-200"
+                                      className="h-8 bg-card shadow-xs hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20"
                                       onClick={() => {
                                         setDiscardingEmailId(email.id);
                                         discardEmail(
@@ -310,7 +310,7 @@ export default function DashboardPage() {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="h-8 bg-white shadow-xs hover:bg-gray-50 hover:text-gray-900"
+                                      className="h-8 bg-card shadow-xs hover:bg-accent hover:text-accent-foreground"
                                       onClick={async () => {
                                         if (email.email_message) {
                                           await navigator.clipboard.writeText(email.email_message);
@@ -332,13 +332,13 @@ export default function DashboardPage() {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={5} className="px-6 py-12 text-center text-sm text-gray-500">
+                            <td colSpan={5} className="px-6 py-12 text-center text-sm text-muted-foreground">
                               <div className="flex flex-col items-center justify-center gap-2">
-                                <div className="p-3 bg-gray-100 rounded-full">
-                                  <Download className="h-6 w-6 text-gray-400" />
+                                <div className="p-3 bg-muted rounded-full">
+                                  <Download className="h-6 w-6 text-muted-foreground" />
                                 </div>
-                                <p className="font-medium text-gray-900">No emails yet</p>
-                                <p className="text-gray-400">Generate your first email to see it here.</p>
+                                <p className="font-medium text-foreground">No emails yet</p>
+                                <p className="text-muted-foreground">Generate your first email to see it here.</p>
                               </div>
                             </td>
                           </tr>
@@ -349,24 +349,24 @@ export default function DashboardPage() {
 
                   {/* Load More Button */}
                   {hasNextPage && (
-                    <div className="p-6 border-t border-gray-100 flex justify-center bg-gray-50/30">
+                    <div className="p-6 border-t border-border flex justify-center bg-muted/30">
                       <Button
                         onClick={() => fetchNextPage()}
                         disabled={isFetchingNextPage}
                         variant="outline"
                         size="lg"
-                        className="group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg bg-white border-gray-200"
+                        className="group relative overflow-hidden transition-all duration-300 hover:scale-105 hover:shadow-lg bg-card border-border"
                       >
                         <span className={`flex items-center gap-2 transition-all duration-300 ${
                           isFetchingNextPage ? 'opacity-0' : 'opacity-100'
                         }`}>
                           Load More Emails
-                          <ChevronDown className="h-4 w-4 text-gray-400 group-hover:translate-y-0.5 transition-transform" />
+                          <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:translate-y-0.5 transition-transform" />
                         </span>
 
                         {isFetchingNextPage && (
                           <span className="absolute inset-0 flex items-center justify-center">
-                            <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                           </span>
                         )}
                       </Button>
@@ -375,7 +375,7 @@ export default function DashboardPage() {
 
                   {/* End of emails indicator */}
                   {!hasNextPage && emailHistory.length > 0 && (
-                    <div className="p-4 text-center text-xs text-gray-400 border-t border-gray-100 bg-gray-50/30">
+                    <div className="p-4 text-center text-xs text-muted-foreground border-t border-border bg-muted/30">
                       All emails loaded
                     </div>
                   )}
