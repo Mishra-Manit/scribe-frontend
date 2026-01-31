@@ -341,7 +341,6 @@ export default function TemplateGenerationPage() {
                           <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
                             {template.user_instructions}
                           </p>
-<<<<<<< HEAD
                           <div className="bg-muted/50 p-3 rounded text-xs text-muted-foreground font-mono leading-relaxed max-h-40 overflow-y-auto">
                             {template.template_text}
                           </div>
