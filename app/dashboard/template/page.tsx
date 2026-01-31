@@ -19,7 +19,7 @@ import { Label } from "@/components/ui/label";
 import { FadeIn } from "@/components/motion/FadeIn";
 import { SlideIn } from "@/components/motion/SlideIn";
 import { ScaleIn } from "@/components/motion/ScaleIn";
-import { Loader2, Copy, FileText, CheckCircle2, History } from "lucide-react";
+import { Loader2, Copy, FileText, CheckCircle2, History, Check } from "lucide-react";
 
 const MAX_TEMPLATES = 5;
 
@@ -33,6 +33,7 @@ export default function TemplateGenerationPage() {
   const [error, setError] = useState<string | null>(null);
   const [generatedTemplate, setGeneratedTemplate] = useState("");
   const [copied, setCopied] = useState(false);
+  const [copiedTemplateId, setCopiedTemplateId] = useState<number | null>(null);
   const generatedTemplateRef = useRef<HTMLDivElement>(null);
 
   // Fetch user profile for template_count
@@ -323,16 +324,25 @@ export default function TemplateGenerationPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => navigator.clipboard.writeText(template.template_text)}
+                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity border border-gray-200 hover:bg-gray-50"
+                              onClick={async () => {
+                                await navigator.clipboard.writeText(template.template_text);
+                                setCopiedTemplateId(template.id);
+                                setTimeout(() => setCopiedTemplateId(null), 2000);
+                              }}
                             >
-                              <Copy className="h-3 w-3 text-muted-foreground" />
+                              {copiedTemplateId === template.id ? (
+                                <Check className="h-3.5 w-3.5 text-green-600" />
+                              ) : (
+                                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                              )}
                             </Button>
                           </div>
                           <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
                             {template.user_instructions}
                           </p>
-                          <div className="bg-muted/50 p-3 rounded text-xs text-muted-foreground font-mono line-clamp-6 leading-relaxed">
+<<<<<<< HEAD
+                          <div className="bg-muted/50 p-3 rounded text-xs text-muted-foreground font-mono leading-relaxed max-h-40 overflow-y-auto">
                             {template.template_text}
                           </div>
                         </CardContent>
