@@ -33,7 +33,7 @@ export default function TemplateGenerationPage() {
   const [error, setError] = useState<string | null>(null);
   const [generatedTemplate, setGeneratedTemplate] = useState("");
   const [copied, setCopied] = useState(false);
-  const [copiedTemplateId, setCopiedTemplateId] = useState<number | null>(null);
+  const [copiedTemplateId, setCopiedTemplateId] = useState<string | null>(null);
   const generatedTemplateRef = useRef<HTMLDivElement>(null);
 
   // Fetch user profile for template_count
@@ -269,7 +269,7 @@ export default function TemplateGenerationPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-500/10"
+                        className="text-green-600 dark:text-green-400 border border-green-500/30 bg-card/60 hover:text-green-700 dark:hover:text-green-300 hover:bg-green-500/15"
                         onClick={() => {
                           navigator.clipboard.writeText(generatedTemplate);
                           setCopied(true);
@@ -324,7 +324,7 @@ export default function TemplateGenerationPage() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity border border-gray-200 hover:bg-gray-50"
+                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity border border-border/60 bg-muted/40 text-muted-foreground hover:bg-muted/70 hover:text-foreground dark:border-border/50 dark:bg-muted/20 dark:hover:bg-muted/40"
                               onClick={async () => {
                                 await navigator.clipboard.writeText(template.template_text);
                                 setCopiedTemplateId(template.id);
@@ -334,7 +334,7 @@ export default function TemplateGenerationPage() {
                               {copiedTemplateId === template.id ? (
                                 <Check className="h-3.5 w-3.5 text-green-600" />
                               ) : (
-                                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                                <Copy className="h-3.5 w-3.5" />
                               )}
                             </Button>
                           </div>

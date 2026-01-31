@@ -225,19 +225,16 @@ export default function DashboardPage() {
                     <table className="w-full">
                       <thead className="bg-muted/50 border-b border-border">
                         <tr>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[12%]">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[17%]">
                             Recipient
                           </th>
                           <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[12%]">
                             Interest
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[8%]">
-                            Type
-                          </th>
                           <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[10%]">
                             Status
                           </th>
-                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[58%]">
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider w-[61%]">
                             Content
                           </th>
                         </tr>
@@ -260,11 +257,6 @@ export default function DashboardPage() {
                                 <div className="max-w-xs wrap-break-word">
                                   {email.recipient_interest}
                                 </div>
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground align-top">
-                                <span className="px-2.5 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary capitalize border border-primary/20">
-                                  {email.template_type}
-                                </span>
                               </td>
                               <td className="px-6 py-4 whitespace-nowrap text-sm align-top">
                                 <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full border ${
@@ -332,7 +324,7 @@ export default function DashboardPage() {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan={5} className="px-6 py-12 text-center text-sm text-muted-foreground">
+                            <td colSpan={4} className="px-6 py-12 text-center text-sm text-muted-foreground">
                               <div className="flex flex-col items-center justify-center gap-2">
                                 <div className="p-3 bg-muted rounded-full">
                                   <Download className="h-6 w-6 text-muted-foreground" />
