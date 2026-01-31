@@ -332,7 +332,7 @@ export default function TemplateGenerationPage() {
                           <p className="text-sm text-gray-600 line-clamp-2 mb-2">
                             {template.user_instructions}
                           </p>
-                          <div className="bg-gray-50 p-3 rounded text-xs text-gray-600 font-mono line-clamp-6 leading-relaxed">
+                          <div className="bg-gray-50 p-3 rounded text-xs text-gray-600 font-mono leading-relaxed max-h-40 overflow-y-auto">
                             {template.template_text}
                           </div>
                         </CardContent>
