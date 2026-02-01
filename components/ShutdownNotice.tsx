@@ -28,7 +28,7 @@ export function ShutdownNotice({ className }: ShutdownNoticeProps) {
         <div className="mt-6 space-y-4 text-white/90 text-sm">
           <div className="border-t border-white/20 pt-4">
             <p className="font-medium mb-3">
-              If necessary, utilize the provided GitHub links to the self-hosted environment to facilitate integration or deployment:
+              If necessary, use these GitHub links to self-host the service:
             </p>
             <ul className="space-y-4">
               <li>
