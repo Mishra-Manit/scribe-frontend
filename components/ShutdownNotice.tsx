@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Wrench } from "lucide-react";
 
 interface ShutdownNoticeProps {
   className?: string;
@@ -11,17 +11,25 @@ export function ShutdownNotice({ className }: ShutdownNoticeProps) {
     <div className={className}>
       <div className="bg-black border border-white/20 text-white max-w-lg p-8 rounded-lg">
         <div className="text-center">
+          <div className="flex items-center justify-center mb-4">
+            <Wrench className="h-8 w-8 text-white/80" />
+          </div>
           <h1 className="text-2xl font-bold text-white">
-            <span className="bg-white text-black px-2">scribe</span> shutdown
+            <span className="bg-white text-black px-2">scribe</span> maintenance
           </h1>
           <p className="text-white/80 mt-4 text-base leading-relaxed">
-            Scribe has been shut down due to server costs.
+            We are currently undergoing scheduled maintenance.
+          </p>
+          <p className="text-white/60 mt-2 text-sm">
+            The service will be unavailable for the next 24 hours.
           </p>
         </div>
 
         <div className="mt-6 space-y-4 text-white/90 text-sm">
           <div className="border-t border-white/20 pt-4">
-            <p className="font-medium mb-3">Options:</p>
+            <p className="font-medium mb-3">
+              If necessary, utilize the provided GitHub links to the self-hosted environment to facilitate integration or deployment:
+            </p>
             <ul className="space-y-4">
               <li>
                 <span className="text-white/60">Self-host the service:</span>
@@ -47,7 +55,7 @@ export function ShutdownNotice({ className }: ShutdownNoticeProps) {
                 </a>
               </li>
               <li>
-                <span className="text-white/60">Contact for service restart:</span>
+                <span className="text-white/60">Contact for service inquiries:</span>
                 <br />
                 <a
                   href="mailto:mshmanit@gmail.com"

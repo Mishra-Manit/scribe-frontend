@@ -46,11 +46,15 @@ export const ENVIRONMENT = process.env.NEXT_PUBLIC_ENVIRONMENT || 'DEVELOPMENT';
 export const isProduction = () => ENVIRONMENT === 'PRODUCTION';
 
 /**
- * Feature flag to show shutdown notice across the app.
- * When true: Landing page shows shutdown UI, dashboard redirects to landing.
+ * Feature flag to show maintenance/shutdown notice across the app.
+ * When true: 
+ *   - Landing page shows maintenance notice with GitHub self-hosting links
+ *   - All sign-in and get started buttons are hidden
+ *   - Dashboard redirects to landing page (users cannot access the app)
+ *   - Displays 24-hour scheduled maintenance message
  * When false: Normal app behavior.
  */
-export const SHOW_SHUTDOWN_NOTICE = false;
+export const SHOW_SHUTDOWN_NOTICE = true;
 
 /**
  * Helper to check if running in development
