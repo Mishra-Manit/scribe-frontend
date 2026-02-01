@@ -6,6 +6,8 @@ import { supabase } from "../config/supabase";
 import { useAuth } from "../context/AuthContextProvider";
 import { Hero } from "@/components/landing/hero";
 import { LandingHeader } from "@/components/landing/header";
+import { ShutdownNotice } from "@/components/ShutdownNotice";
+import { SHOW_SHUTDOWN_NOTICE } from "@/config/api";
 
 export default function LandingPage() {
   const router = useRouter();
@@ -15,7 +17,8 @@ export default function LandingPage() {
   const redirectPath = getSafeRedirectPath(redirectParam);
 
   React.useEffect(() => {
-    if (user) {
+    // Don't redirect to dashboard if shutdown is active
+    if (user && !SHOW_SHUTDOWN_NOTICE) {
       router.replace(redirectPath);
     }
   }, [user, router, redirectPath]);
@@ -38,6 +41,15 @@ export default function LandingPage() {
       console.error("Error signing in with Google: ", error);
     }
   };
+
+  // Show shutdown notice when maintenance mode is active
+  if (SHOW_SHUTDOWN_NOTICE) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
+        <ShutdownNotice />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white">
