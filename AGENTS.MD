@@ -6,7 +6,7 @@ This file provides guidance to OpenCode when working with code in this repositor
 
 ### Tech Stack
 - **Frontend**: Next.js 15.3.2 (App Router) with React 19, TypeScript
-- **Backend API**: External API at `scribeserver.onrender.com` (or `localhost:8000` in dev)
+- **Backend API**: External API at `scribeapi.manitmishra.com` (self-hosted on Raspberry Pi via Cloudflare Tunnel, or `localhost:8000` in dev)
 - **Authentication**: Supabase Auth SSR
 - **State Management**: Zustand
 - **Data Fetching**: TanStack Query (React Query)
