@@ -53,6 +53,13 @@ export default function GenerateEmailsPage() {
   const [showMessage, setShowMessage] = useState(false);
   const [templateLoaded, setTemplateLoaded] = useState(false);
 
+  // Pulse animation for Template Guide on page load
+  const [showPulse, setShowPulse] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowPulse(false), 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Fetch user profile to get saved template
   const { data: userProfile, isLoading: profileLoading } = useQuery({
     queryKey: queryKeys.user.profile(),
@@ -190,7 +197,11 @@ export default function GenerateEmailsPage() {
             <div className="lg:col-span-1 order-last lg:order-first">
               <SlideIn delay={0.2} direction="left">
                 <div className="sticky top-28 space-y-4">
-                  <Card className="border-border/50 bg-primary/5 dark:bg-primary/10">
+                  <Card className={`border-border/50 bg-primary/5 dark:bg-primary/10 transition-all duration-500 ${
+                    showPulse
+                      ? "ring-1 ring-primary/25 animate-pulse shadow-md shadow-primary/10"
+                      : ""
+                  }`}>
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3 text-foreground font-semibold">
                         <span>Template Guide</span>
