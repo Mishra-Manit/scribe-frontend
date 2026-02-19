@@ -77,11 +77,6 @@ export class ApiClient {
       throw new AuthenticationError(AUTH_ERRORS.NO_TOKEN.dev);
     }
 
-    // Dev-only: log token prefix for debugging
-    logger.debug('Auth token retrieved', {
-      tokenPrefix: token.substring(0, 20) + '...'
-    });
-
     return token;
   }
 
@@ -339,5 +334,3 @@ export class ApiClient {
 // Singleton API client instance
 export const apiClient = new ApiClient();
 
-// Export the getAuthToken method for external use
-export const getAuthToken = () => apiClient.getAuthToken();

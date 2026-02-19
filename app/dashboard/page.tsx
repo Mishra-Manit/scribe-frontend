@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { useInfiniteEmailHistory } from "@/hooks/useInfiniteEmailHistory";
@@ -19,7 +19,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Copy, Check, Download, Loader2, ChevronDown, Trash2 } from "lucide-react";
 import { QueueStatus } from "@/components/QueueStatus";
-import { getAuthToken } from "@/lib/api/client";
 import { useEmailExport } from "@/hooks/useEmailExport";
 import { useEmailDiscard } from "@/hooks/useEmailDiscard";
 import { FadeIn } from "@/components/motion/FadeIn";
@@ -31,20 +30,6 @@ export default function DashboardPage() {
 
   // Wait for Zustand stores to hydrate
   const uiHydrated = useHasHydrated();
-
-  // Dev-only: trigger a token fetch once auth is ready so ApiClient logs the JWT
-  useEffect(() => {
-    if (process.env.NODE_ENV !== "development") return;
-    if (!supabaseReady || loading) return;
-
-    try {
-      const token = getAuthToken();
-      console.log("[Dashboard] getAuthToken() length:", token.length);
-      console.log("[Dashboard] JWT token:", token);
-    } catch (error) {
-      console.error("[Dashboard] getAuthToken() failed:", error);
-    }
-  }, [supabaseReady, loading]);
 
   // Email history with React Query infinite pagination
   const {
