@@ -1,30 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Scribe Frontend
+
+Scribe is a cold email generation platform for academic outreach. This repository contains the Next.js frontend that handles authentication, queue management, and real-time status updates while communicating with the FastAPI backend.
+
+## Tech Stack
+
+- Next.js (App Router), React, TypeScript
+- Supabase Auth (JWT-based session handling)
+- Zustand for client state management
+- TanStack Query for API data fetching and polling
+- Tailwind CSS + shadcn/ui for UI components
+
+## Features
+
+- Google/email authentication with Supabase
+- Persistent background queue for email generation requests
+- Real-time queue status updates and email history
+- Export generated emails to Excel
+- Template-driven generation flow with backend validation
+
+## Architecture (Frontend)
+
+The frontend follows a simple layered flow:
+
+`UI Components -> React Query Hooks -> API Client -> FastAPI Backend`
+
+- Queue state is persisted in local storage through Zustand
+- Auth token access is synchronous from the auth store
+- Dashboard-level queue manager keeps processing active across route changes
 
 ## Getting Started
 
-First, run the development server:
+### 1) Install dependencies
+
+```bash
+npm install
+```
+
+### 2) Configure environment variables
+
+Create `.env.local` with:
+
+```env
+NEXT_PUBLIC_ENVIRONMENT=DEVELOPMENT
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+```
+
+### 3) Run development server
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `npm run dev` - start local dev server
+- `npm run build` - create production build
+- `npm run start` - start production server
+- `npm run lint` - run ESLint
+- `npm run types:generate` - regenerate Supabase TypeScript types
 
-## Learn More
+## Related Repositories
 
-To learn more about Next.js, take a look at the following resources:
+- Backend API: `pythonserver` (FastAPI + PostgreSQL + Celery)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deployment Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Frontend can be deployed on Vercel or any Node-compatible host
+- Ensure backend API and Supabase env vars are configured per environment
