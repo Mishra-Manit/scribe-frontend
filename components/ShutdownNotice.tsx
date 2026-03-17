@@ -21,7 +21,7 @@ export function ShutdownNotice({ className }: ShutdownNoticeProps) {
             We are currently undergoing scheduled maintenance.
           </p>
           <p className="text-white/60 mt-2 text-sm">
-            The service will be unavailable for the next 24 hours.
+            The service will be unavailable for the next few days.
           </p>
         </div>
 

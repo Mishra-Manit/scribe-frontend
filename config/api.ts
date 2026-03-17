@@ -54,7 +54,7 @@ export const isProduction = () => ENVIRONMENT === 'PRODUCTION';
  *   - Displays 24-hour scheduled maintenance message
  * When false: Normal app behavior.
  */
-export const SHOW_SHUTDOWN_NOTICE = false;
+export const SHOW_SHUTDOWN_NOTICE = true;
 
 /**
  * Helper to check if running in development
