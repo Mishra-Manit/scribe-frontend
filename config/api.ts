@@ -47,14 +47,14 @@ export const isProduction = () => ENVIRONMENT === 'PRODUCTION';
 
 /**
  * Feature flag to show maintenance/shutdown notice across the app.
- * When true: 
+ * When true:
  *   - Landing page shows maintenance notice with GitHub self-hosting links
  *   - All sign-in and get started buttons are hidden
  *   - Dashboard redirects to landing page (users cannot access the app)
  *   - Displays 24-hour scheduled maintenance message
  * When false: Normal app behavior.
  */
-export const SHOW_SHUTDOWN_NOTICE = true;
+export const SHOW_SHUTDOWN_NOTICE = false;
 
 /**
  * Helper to check if running in development
