@@ -30,7 +30,7 @@ export function WelcomeScreen({ isOpen }: { isOpen: boolean }) {
   return (
     <Dialog open={isOpen}>
       <DialogContent 
-        className="sm:max-w-[500px]" 
+        className="sm:max-w-[500px] max-h-[80vh] flex flex-col" 
         onPointerDownOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
@@ -41,7 +41,7 @@ export function WelcomeScreen({ isOpen }: { isOpen: boolean }) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-4">
+        <div className="py-4 space-y-4 overflow-y-auto flex-1 min-h-0">
           <FadeIn delay={0.1}>
             <Card className="border-border/50 bg-muted/30">
               <CardContent className="p-5">

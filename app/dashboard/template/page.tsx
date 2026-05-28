@@ -231,12 +231,21 @@ export default function TemplateGenerationPage() {
 
                     {isGenerating && (
                       <FadeIn>
-                        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 flex items-center gap-3">
-                          <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                          <p className="text-sm text-foreground">
-                            {uploadMutation.isPending && "Uploading resume..."}
-                            {generateMutation.isPending && "Analyzing resume and generating template (this takes 5-15s)..."}
-                          </p>
+                        <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 flex items-start gap-3">
+                          <Loader2 className="h-5 w-5 animate-spin text-primary mt-0.5 shrink-0" />
+                          <div className="text-sm text-foreground space-y-1">
+                            {uploadMutation.isPending && (
+                              <p>Uploading resume...</p>
+                            )}
+                            {generateMutation.isPending && (
+                              <>
+                                <p>Analyzing resume and generating template...</p>
+                                <p className="text-muted-foreground">
+                                  Please don&apos;t leave this page — this can take up to 2 minutes.
+                                </p>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </FadeIn>
                     )}
@@ -341,7 +350,7 @@ export default function TemplateGenerationPage() {
                           <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
                             {template.user_instructions}
                           </p>
-                          <div className="bg-muted/50 p-3 rounded text-xs text-muted-foreground font-mono leading-relaxed max-h-40 overflow-y-auto">
+                          <div className="bg-muted/50 p-3 rounded text-xs text-muted-foreground font-mono leading-relaxed max-h-40 overflow-y-auto whitespace-pre-wrap">
                             {template.template_text}
                           </div>
                         </CardContent>

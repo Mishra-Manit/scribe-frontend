@@ -131,7 +131,7 @@ export const templateAPI = {
     return apiClient.requestWithValidation("/api/templates/", TemplateResponseSchema, {
       method: "POST",
       body: JSON.stringify({ pdf_url: pdfUrl, user_instructions: userInstructions }),
-      timeout: 30000,
+      timeout: 180000,
       retry: false,
       ...options,
     });
